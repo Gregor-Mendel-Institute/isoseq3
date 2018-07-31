@@ -1,18 +1,26 @@
 #!/usr/bin/env nextflow
 
 params.input = '/lustre/scratch/users/falko.hofmann/isoseq/test/*.bam'
-params.input_pbi = '/lustre/scratch/users/falko.hofmann/isoseq/test/*.bam.pbi'
 params.outdir = '/lustre/scratch/users/falko.hofmann/isoseq/test/results'
 params.primers = '/lustre/scratch/users/falko.hofmann/pipelines/isoseq3/primers.fasta'
 params.annotation = 'tair10'
 params.intron_max  = 6000
 params.transcript_max = 60000
 
-Channel.fromPath(params.input).into {input_ccs; input_polish}
-Channel.fromPath(params.input_pbi).into {input_pbi}
+Channel
+    .fromPath(params.input).
+    .ifEmpty { error "Cannot find any matching bam files: $params.input" }
+    .into {input_ccs; input_polish}
 
-primers_file = file(params.primers)
+Channel
+    .fromPath(params.input + '.pbi')
+    .ifEmpty { error "Cannot find matching bam.pbi files: $params.input" }
+    .into {input_pbi}
 
+Channel
+    .fromPath(params.primers)
+    .ifEmpty { error "Cannot find primer file: $params.primers" }
+    .into {primers_file}
 
 process run_ccs{
 
@@ -23,7 +31,7 @@ process run_ccs{
 
         output:
         file 'ccs.*'
-	file 'ccs_report.txt'
+        file 'ccs_report.txt'
         file "ccs.bam" into ccs_out
 
         """
@@ -42,15 +50,6 @@ process run_lima{
     file primers from primers_file
 
     output:
-    // file 'demux.css.json'
-    // file 'demux.css.lima.clips'
-    // file 'demux.css.lima.counts'
-    // file 'demux.css.lima.report'
-    // file 'demux.css.lima.summary'
-    // file 'demux.css.removed.bam'
-    // file 'demux.css.removed.bam.pbi'
-    // file 'demux.css.removed.subreadset.xml'
-    // file 'demux.css.primer_5p--primer_3p.subreadset.xml'
     file 'demux.ccs.*'
     file 'demux.ccs.primer_5p--primer_3p.bam' into lima_out
     
