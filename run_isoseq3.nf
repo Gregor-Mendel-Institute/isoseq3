@@ -8,19 +8,20 @@ params.intron_max  = 6000
 params.transcript_max = 60000
 
 Channel
-    .fromPath(params.input).
+    .fromPath(params.input)
     .ifEmpty { error "Cannot find any matching bam files: $params.input" }
     .into {input_ccs; input_polish}
 
 Channel
     .fromPath(params.input + '.pbi')
     .ifEmpty { error "Cannot find matching bam.pbi files: $params.input" }
-    .into {input_pbi}
+    .set {input_pbi}
 
 Channel
     .fromPath(params.primers)
     .ifEmpty { error "Cannot find primer file: $params.primers" }
-    .into {primers_file}
+    .set {primers_file}
+
 
 process run_ccs{
 
@@ -38,7 +39,6 @@ process run_ccs{
         time ccs $ccs_input ccs.bam --noPolish --minPasses 1
         """
 }
-
 
 
 process run_lima{
