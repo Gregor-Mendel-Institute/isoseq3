@@ -49,8 +49,8 @@ process run_lima{
     // file 'demux.css.removed.subreadset.xml'
     // file 'demux.css.primer_5p--primer_3p.subreadset.xml'
     file 'demux.ccs.*'
-    file 'demux.primer_5p--primer_3p.bam' into lima_out
-
+    file 'demux.ccs.primer_5p--primer_3p.bam' into lima_out
+    
     """
     time lima $ccs_bam $primers demux.ccs.bam --isoseq --no-pbi --dump-clips --dump-removed
     """
