@@ -1,33 +1,30 @@
 #!/usr/bin/env nextflow
 
-params.input = '/lustre/scratch/users/falko.hofmann/isoseq/*/.bam'
-params.outdir = ''
-params.primers = 'primers.fasta'
+params.input = '/lustre/scratch/users/falko.hofmann/isoseq/test/*.bam'
+params.outdir = '/lustre/scratch/users/falko.hofmann/isoseq/test/results'
+params.primers = '/lustre/scratch/users/falko.hofmann/pipelines/isoseq3/primers.fasta'
 params.annotation = 'tair10'
 params.intron_max  = 6000
 params.transcript_max = 60000
 
-
-input_files = Channel.fromPath(params.input)
+Channel.fromPath(params.input).into {input_ccs; input_polish}
 primers_file = file(params.primers)
 
 
 process run_ccs{
 
-        publishDir "${params.outdir}/ccs", mode: 'copy'}
+        publishDir "$params.outdir/ccs", mode: 'copy'
 
         input:
-        file ccs_input from input_files
+        file ccs_input from input_ccs
 
         output:
-        // file "ccs.bam.pbi"
-        // file "ccs._report.txt"
         file 'ccs.*'
+	file 'ccs_report.txt'
         file "ccs.bam" into ccs_out
 
         """
-        echo 'ccs $ccs_input ccs.bam --noPolish --minPasses 1'
-        time ccs $ccs_input ccs.bam' --noPolish --minPasses 1
+        time ccs $ccs_input ccs.bam --noPolish --minPasses 1
         """
 }
 
@@ -35,7 +32,7 @@ process run_ccs{
 
 process run_lima{
 
-    publishDir "${params.outdir}/lima", mode: 'copy'}
+    publishDir "$params.outdir/lima", mode: 'copy'
 
     input:
     file ccs_bam from ccs_out
@@ -51,12 +48,11 @@ process run_lima{
     // file 'demux.css.removed.bam.pbi'
     // file 'demux.css.removed.subreadset.xml'
     // file 'demux.css.primer_5p--primer_3p.subreadset.xml'
-    file 'demux.css.*'
+    file 'demux.ccs.*'
     file 'demux.primer_5p--primer_3p.bam' into lima_out
 
     """
-    echo 'lima $ccs_bam $primers demux.ccs.bam --isoseq --no-pbi --dump-clips --dump-removed'
-    time lima '$ccs_bam $primers demux.ccs.bam --isoseq --no-pbi --dump-clips --dump-removed'
+    time lima $ccs_bam $primers demux.ccs.bam --isoseq --no-pbi --dump-clips --dump-removed
     """
 
 }
@@ -64,7 +60,7 @@ process run_lima{
 
 process cluster_reads{
 
-    publishDir "${params.outdir}/cluster", mode: 'copy'}
+    publishDir "$params.outdir/cluster", mode: 'copy'
 
     input:
     file lima_demux from lima_out
@@ -74,7 +70,6 @@ process cluster_reads{
     file 'unpolished.bam' into cluster_out
 
     """
-    echo 'time isoseq3 cluster $lima_demux unpolished.bam --require-polya --verbose'
     time isoseq3 cluster $lima_demux unpolished.bam --require-polya --verbose 
     """
 }
@@ -82,18 +77,17 @@ process cluster_reads{
 
 process polish_reads{
 
-    publishDir "${params.outdir}/polish", mode: 'copy'}
+    publishDir "$params.outdir/polish", mode: 'copy'
 
     input:
     file cluster_bam from cluster_out
-    file all_reads_bam from input_files
+    file all_reads_bam from input_polish
 
     output:
     file 'polished.*'
     file 'polished.hq.fastq.gz' into polish_out
 
     """
-    echo 'time isoseq3 polish $cluster_bam $all_reads_bam polished.bam'
     time isoseq3 polish $cluster_bam $all_reads_bam polished.bam
     """
 
@@ -102,7 +96,7 @@ process polish_reads{
 // process align_reads{
 //     tag "$name"
 
-//     publishDir "${params.outdir}/star", mode: 'copy'}
+//     publishDir "$params.outdir/star", mode: 'copy'
 
 //     input:
 //     var intron_max from
