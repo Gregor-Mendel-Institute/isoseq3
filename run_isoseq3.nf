@@ -96,6 +96,26 @@ process polish_reads{
 
 }
 
+
+// TODO: implement process for index generation with STARlong
+// TODO: check which files are beeing generated and are needed
+// process build_index{
+
+//     input:
+//     file fasta from genome
+//     file anno from annotation
+
+//     output
+//     file '...' into index
+
+//     """
+//     """
+
+// }
+
+
+// TODO: implement process for alignment with STARlong
+// TODO: check which files are beeing generated and are needed
 // process align_reads{
 //     tag "$name"
 
