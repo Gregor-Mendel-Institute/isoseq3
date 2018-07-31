@@ -1,6 +1,7 @@
 #!/usr/bin/env nextflow
 
 params.input = '/lustre/scratch/users/falko.hofmann/isoseq/test/*.bam'
+params.input_pbi = '/lustre/scratch/users/falko.hofmann/isoseq/test/*.bam.pbi'
 params.outdir = '/lustre/scratch/users/falko.hofmann/isoseq/test/results'
 params.primers = '/lustre/scratch/users/falko.hofmann/pipelines/isoseq3/primers.fasta'
 params.annotation = 'tair10'
@@ -8,6 +9,8 @@ params.intron_max  = 6000
 params.transcript_max = 60000
 
 Channel.fromPath(params.input).into {input_ccs; input_polish}
+Channel.fromPath(params.input_pbi).into {input_pbi}
+
 primers_file = file(params.primers)
 
 
@@ -80,6 +83,7 @@ process polish_reads{
     publishDir "$params.outdir/polish", mode: 'copy'
 
     input:
+    file pbi from input_pbi
     file cluster_bam from cluster_out
     file all_reads_bam from input_polish
 
