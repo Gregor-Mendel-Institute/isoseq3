@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 
-params.input = '/lustre/scratch/users/falko.hofmann/isoseq/test/*.bam'
+params.input = '/lustre/scratch/users/falko.hofmann/isoseq/*/'
 params.outdir = '/lustre/scratch/users/falko.hofmann/isoseq/test/results'
 params.primers = '/lustre/scratch/users/falko.hofmann/pipelines/isoseq3/primers.fasta'
 params.genome = 'tair10'
@@ -15,31 +15,25 @@ params.intron_max  = 6000
 params.transcript_max = 60000
 
 Channel
-    .fromPath(params.input)
-    .ifEmpty { error "Cannot find any matching bam files: $params.input" }
-    .into {input_ccs; input_polish}
+    .fromFilePairs(params.input + '*.{bam, pbi}') { file -> file.name.replaceAll(/.bam|.pbi$/,'') }
+    .ifEmpty { error "Cannot find matching bam and pbi files: $params.input." }
+    .set { samples_ch }
+// see https://github.com/nextflow-io/patterns/blob/926d8bdf1080c05de406499fb3b5a0b1ce716fcb/process-per-file-pairs/main2.nf
 
-Channel
-    .fromPath(params.input + '.pbi')
-    .ifEmpty { error "Cannot find matching bam.pbi files: $params.input" }
-    .set {input_pbi}
+// Channel
+//     .fromPath(params.input)
+//     .ifEmpty { error "Cannot find any matching bam files: $params.input" }
+//     .into {input_ccs; input_polish}
+
+// Channel
+//     .fromPath(params.input + '.pbi')
+//     .ifEmpty { error "Cannot find matching bam.pbi files: $params.input. Make sure your pacbio file is indexed" }
+//     .set {input_pbi}
 
 Channel
     .fromPath(params.primers)
     .ifEmpty { error "Cannot find primer file: $params.primers" }
     .set {primers_file}
-
-
-process make_paths{
-    input:
-    var path from params.input
-
-    output:
-
-    """
-    """
-    
-}
 
 
 process run_ccs{
@@ -217,3 +211,5 @@ process bam_to_bed{
     bedtools bamtobed -bed12 -i name.bam > $name.bed
     """
 }
+
+// TODO: add processes for staging in and out.
