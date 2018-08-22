@@ -1,7 +1,8 @@
 #!/usr/bin/env nextflow
 
+
 params.input = '/lustre/scratch/users/falko.hofmann/isoseq/*/'
-params.outdir = '/lustre/scratch/users/falko.hofmann/isoseq/test/results'
+//params.outdir = '/lustre/scratch/users/falko.hofmann/isoseq/test/results'
 params.primers = '/lustre/scratch/users/falko.hofmann/pipelines/isoseq3/primers.fasta'
 params.genome = 'tair10'
 params.annotation = params.genome ? params.genomes[ params.genome ].annotation ?: false : false
@@ -14,13 +15,13 @@ Channel
     .fromFilePairs(params.input + '*.{bam, pbi}') { file -> file.name.replaceAll(/.bam|.pbi$/,'') }
     .ifEmpty { error "Cannot find matching bam and pbi files: $params.input." }
     .into {input_ccs; input_polish}
-
 // see https://github.com/nextflow-io/patterns/blob/926d8bdf1080c05de406499fb3b5a0b1ce716fcb/process-per-file-pairs/main2.nf
 
-// Channel
-//     .fromPath(params.input)
-//     .ifEmpty { error "Cannot find any matching bam files: $params.input" }
-//     .into {input_ccs; input_polish}
+
+Channel
+    .fromPath(params.input + '/results')
+    .into {outdir_ccs; outdir_lima; outdir_cluster; outdir_polish; outdir_alignment; outdir_bed}
+
 
 // Channel
 //     .fromPath(params.input + '.pbi')
@@ -37,9 +38,10 @@ process run_ccs{
 
         tag "ccs: $name"
 
-        publishDir "$params.outdir/ccs", mode: 'copy'
+        publishDir "$outdir/ccs", mode: 'copy'
 
         input:
+        val outdir from outdir_ccs
         set name, file(bam) from input_ccs
         //file ccs_input from input_ccs
 
@@ -48,6 +50,7 @@ process run_ccs{
         file 'ccs_report.txt'
         file "${name}.ccs.bam" into ccs_out
         val sampleId into sample_id
+    
 
         """
         time ccs ${name}.bam ${name}.ccs.bam --noPolish --minPasses 1
@@ -59,10 +62,11 @@ process run_lima{
 
     tag "lima: $name"
 
-    publishDir "$params.outdir/lima", mode: 'copy'
+    publishDir "$outdir/lima", mode: 'copy'
 
     input:
     val name from sample_id
+    val outdir from outdir_lima
     file ccs_bam from ccs_out
     file primers from primers_file
 
@@ -70,6 +74,7 @@ process run_lima{
     file "${name}.demux.ccs.*"
     file "${name}.demux.ccs.primer_5p--primer_3p.bam" into lima_out
     val name into sample_id
+
     
     """
     time lima $ccs_bam $primers ${name}.demux.ccs.bam --isoseq --no-pbi --dump-clips --dump-removed
@@ -81,16 +86,18 @@ process run_lima{
 process cluster_reads{
 
     tag "clustering : $name"
-    publishDir "$params.outdir/cluster", mode: 'copy'
+    publishDir "$outdir/cluster", mode: 'copy'
 
     input:
     val name from sample_id
+    val outdir from outdir_cluster
     file lima_demux from lima_out
     
     output:
     file "${name}.unpolished.*"
     file "${name}.unpolished.bam" into cluster_out
     val name into sample_id
+
 
     """
     time isoseq3 cluster $lima_demux ${name}.unpolished.bam --require-polya --verbose 
@@ -102,10 +109,11 @@ process polish_reads{
     
     tag "polishing : $name"
 
-    publishDir "$params.outdir/polish", mode: 'copy'
+    publishDir "$outdir/polish", mode: 'copy'
 
     input:
     set name, file(bam) from input_polish
+    val outdir from outdir_polish
     file cluster_bam from cluster_out
     // file pbi from input_pbi
     // file all_reads_bam from input_polish
@@ -114,8 +122,7 @@ process polish_reads{
     file "${name}.polished.*"
     file "${name}.polished.hq.fastq.gz" into polish_out
     val name into sample_id
-
-
+    
     """
     time isoseq3 polish $cluster_bam ${name}.bam ${name}.polished.bam
     """
@@ -163,6 +170,8 @@ process align_reads{
     val transcript_max from params.transcript_max
     file index from star_index
     file hq_fastq from polish_out
+    val outdir from outdir_alignment
+
 
     output:
     file "${name}.*" into star_out
@@ -212,6 +221,7 @@ process bam_to_bed{
     input:
     val name from sample_id
     file bam, bam_index from bam_files
+    val outdir from outdir_bed
     // file '$name.bam' from bam_files
 
     output:
