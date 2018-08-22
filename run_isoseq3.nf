@@ -10,14 +10,11 @@ params.index = params.genome ? params.genomes[ params.genome ].index ?: false : 
 params.intron_max = params.genome ? params.genomes[ params.genome ].intron_max ?: false : false
 params.transcript_max = params.genome ? params.genomes[ params.genome ].transcript_max ?: false : false
 
-
-params.intron_max  = 6000
-params.transcript_max = 60000
-
 Channel
     .fromFilePairs(params.input + '*.{bam, pbi}') { file -> file.name.replaceAll(/.bam|.pbi$/,'') }
     .ifEmpty { error "Cannot find matching bam and pbi files: $params.input." }
-    .set { samples_ch }
+    .into {input_ccs; input_polish}
+
 // see https://github.com/nextflow-io/patterns/blob/926d8bdf1080c05de406499fb3b5a0b1ce716fcb/process-per-file-pairs/main2.nf
 
 // Channel
@@ -43,15 +40,17 @@ process run_ccs{
         publishDir "$params.outdir/ccs", mode: 'copy'
 
         input:
-        file ccs_input from input_ccs
+        set name, file(bam) from input_ccs
+        //file ccs_input from input_ccs
 
         output:
-        file '$name.ccs.*'
+        file "${name}.ccs.*"
         file 'ccs_report.txt'
-        file "$name.ccs.bam" into ccs_out
+        file "${name}.ccs.bam" into ccs_out
+        val sampleId into sample_id
 
         """
-        time ccs $ccs_input $name.ccs.bam --noPolish --minPasses 1
+        time ccs ${name}.bam ${name}.ccs.bam --noPolish --minPasses 1
         """
 }
 
@@ -63,15 +62,17 @@ process run_lima{
     publishDir "$params.outdir/lima", mode: 'copy'
 
     input:
+    val name from sample_id
     file ccs_bam from ccs_out
     file primers from primers_file
 
     output:
-    file '$name.demux.ccs.*'
-    file '$name.demux.ccs.primer_5p--primer_3p.bam' into lima_out
+    file "${name}.demux.ccs.*"
+    file "${name}.demux.ccs.primer_5p--primer_3p.bam" into lima_out
+    val name into sample_id
     
     """
-    time lima $ccs_bam $primers $name.demux.ccs.bam --isoseq --no-pbi --dump-clips --dump-removed
+    time lima $ccs_bam $primers ${name}.demux.ccs.bam --isoseq --no-pbi --dump-clips --dump-removed
     """
 
 }
@@ -80,18 +81,19 @@ process run_lima{
 process cluster_reads{
 
     tag "clustering : $name"
-
     publishDir "$params.outdir/cluster", mode: 'copy'
 
     input:
+    val name from sample_id
     file lima_demux from lima_out
     
     output:
-    file '$name.unpolished.*'
-    file '$name.unpolished.bam' into cluster_out
+    file "${name}.unpolished.*"
+    file "${name}.unpolished.bam" into cluster_out
+    val name into sample_id
 
     """
-    time isoseq3 cluster $lima_demux $name.unpolished.bam --require-polya --verbose 
+    time isoseq3 cluster $lima_demux ${name}.unpolished.bam --require-polya --verbose 
     """
 }
 
@@ -103,16 +105,19 @@ process polish_reads{
     publishDir "$params.outdir/polish", mode: 'copy'
 
     input:
-    file pbi from input_pbi
+    set name, file(bam) from input_polish
     file cluster_bam from cluster_out
-    file all_reads_bam from input_polish
-
+    // file pbi from input_pbi
+    // file all_reads_bam from input_polish
+ 
     output:
-    file '$name.polished.*'
-    file '$name.polished.hq.fastq.gz' into polish_out
+    file "${name}.polished.*"
+    file "${name}.polished.hq.fastq.gz" into polish_out
+    val name into sample_id
+
 
     """
-    time isoseq3 polish $cluster_bam $all_reads_bam polished.bam
+    time isoseq3 polish $cluster_bam ${name}.bam ${name}.polished.bam
     """
 
 }
@@ -137,8 +142,8 @@ process build_index{
     STARlong --runThreadN ${task.cpus} \
         --runMode genomeGenerate \
         --genomeDir ${params.genome} \ 
-        --genomeFastaFiles $fasta\
-        --sjdbGTFfile $annotation
+        --genomeFastaFiles ${fasta}\
+        --sjdbGTFfile ${annotation}
     """
 
 }
@@ -153,14 +158,17 @@ process align_reads{
     publishDir "$params.outdir/alignment", mode: 'copy'
 
     input:
-    var intron_max from params.intron_max
-    var transcript_max from params.transcript_max
+    val name from sample_id
+    val intron_max from params.intron_max
+    val transcript_max from params.transcript_max
     file index from star_index
     file hq_fastq from polish_out
 
     output:
-    file "*.*" into star_out
-    file "*.bam*" into bam_files
+    file "${name}.*" into star_out
+    file "${name}.{bam, bam.bai}" into bam_files
+    val name into sample_id
+
 
     """"
     time STARlong --readFilesIn ${hq_fastq} --genomeDir $index \
@@ -188,9 +196,9 @@ process align_reads{
         --alignTranscriptsPerReadNmax 100000 \
         --alignTranscriptsPerWindowNmax 10000 \
         --outSAMtype BAM SortedByCoordinate \
-        --outFileNamePrefix $name
+        --outFileNamePrefix ${name}
     
-    samtools index $name
+    samtools index ${name}.bam
     """
 }
 
@@ -202,13 +210,15 @@ process bam_to_bed{
     publishDir "$params.outdir/bed", mode: 'copy'
 
     input:
-    file '$name.bam' from bam_files
+    val name from sample_id
+    file bam, bam_index from bam_files
+    // file '$name.bam' from bam_files
 
     output:
-    file '$name.bed' into bed
+    file "${name}.bed" into bed
 
     """   
-    bedtools bamtobed -bed12 -i name.bam > $name.bed
+    bedtools bamtobed -bed12 -i ${name}.bam > ${name}.bed
     """
 }
 
