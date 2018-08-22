@@ -4,7 +4,7 @@
 params.input = '/lustre/scratch/users/falko.hofmann/isoseq/*/'
 //params.outdir = '/lustre/scratch/users/falko.hofmann/isoseq/test/results'
 params.primers = '/lustre/scratch/users/falko.hofmann/pipelines/isoseq3/primers.fasta'
-params.genome = 'tair10'
+params.genome = 'TAIR10'
 params.annotation = params.genome ? params.genomes[ params.genome ].annotation ?: false : false
 params.fasta = params.genome ? params.genomes[ params.genome ].fasta ?: false : false
 params.index = params.genome ? params.genomes[ params.genome ].index ?: false : false
@@ -12,7 +12,7 @@ params.intron_max = params.genome ? params.genomes[ params.genome ].intron_max ?
 params.transcript_max = params.genome ? params.genomes[ params.genome ].transcript_max ?: false : false
 
 Channel
-    .fromFilePairs(params.input + '*.{bam, pbi}') { file -> file.name.replaceAll(/.bam|.pbi$/,'') }
+    .fromFilePairs(params.input + '*.{bam,bam.pbi}') { file -> file.name.replaceAll(/.bam|.pbi$/,'') }
     .ifEmpty { error "Cannot find matching bam and pbi files: $params.input." }
     .into {input_ccs; input_polish}
 // see https://github.com/nextflow-io/patterns/blob/926d8bdf1080c05de406499fb3b5a0b1ce716fcb/process-per-file-pairs/main2.nf
@@ -148,8 +148,8 @@ process build_index{
     mkdir -p $params.index
     STARlong --runThreadN ${task.cpus} \
         --runMode genomeGenerate \
-        --genomeDir ${params.genome} \ 
-        --genomeFastaFiles ${fasta}\
+        --genomeDir ${params.genome} \
+        --genomeFastaFiles ${fasta} \
         --sjdbGTFfile ${annotation}
     """
 
