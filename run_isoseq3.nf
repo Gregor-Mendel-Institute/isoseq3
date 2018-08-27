@@ -7,7 +7,7 @@ params.primers = '/lustre/scratch/users/falko.hofmann/pipelines/isoseq3/primers.
 params.genome = 'TAIR10'
 params.annotation = params.genome ? params.genomes[ params.genome ].annotation ?: false : false
 params.fasta = params.genome ? params.genomes[ params.genome ].fasta ?: false : false
-params.index = params.genome ? params.genomes[ params.genome ].index ?: false : false
+params.star_index = params.genome ? params.genomes[ params.genome ].star_index ?: false : false
 params.intron_max = params.genome ? params.genomes[ params.genome ].intron_max ?: false : false
 params.transcript_max = params.genome ? params.genomes[ params.genome ].transcript_max ?: false : false
 
@@ -18,6 +18,7 @@ log.info "input paths: ${params.input}"
 log.info "genome: ${params.genome}"
 log.info "annotation: ${params.annotation}"
 log.info "fasta: ${params.fasta}"
+log.info "index: ${params.star_index}"
 log.info "intron max length: ${params.intron_max}"
 log.info "transcript max length: ${params.transcript_max}"
 log.info "\n"
@@ -150,18 +151,19 @@ process build_index{
     input:
     file annotation from params.annotation
     file fasta from params.fasta
+    var genome_dir from params.star_index
 
     output:
     file "${params.genome}.*" into star_index
     file 'Log.out' into log
 
     """
-    mkdir -p $params.star_index
+    mkdir -p ${genome_dir}
     STARlong --runThreadN ${task.cpus} \
         --runMode genomeGenerate \
-        --genomeDir ${params.genome} \
-        --genomeFastaFiles ${params.fasta} \
-        --sjdbGTFfile ${params.annotation}
+        --genomeDir ${genome_dir} \
+        --genomeFastaFiles ${fasta} \
+        --sjdbGTFfile ${annotation}
     """
 
 }
