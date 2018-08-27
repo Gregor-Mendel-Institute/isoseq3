@@ -160,8 +160,8 @@ process build_index{
     STARlong --runThreadN ${task.cpus} \
         --runMode genomeGenerate \
         --genomeDir ${params.genome} \
-        --genomeFastaFiles ${fasta} \
-        --sjdbGTFfile ${annotation}
+        --genomeFastaFiles ${params.fasta} \
+        --sjdbGTFfile ${params.annotation}
     """
 
 }
