@@ -49,7 +49,7 @@ process run_ccs{
         file "${name}.ccs.*"
         file 'ccs_report.txt'
         file "${name}.ccs.bam" into ccs_out
-        val sampleId into sample_id
+        val name into sample_id_ccs
     
 
         """
@@ -65,7 +65,7 @@ process run_lima{
     publishDir "$outdir/lima", mode: 'copy'
 
     input:
-    val name from sample_id
+    val name from sample_id_ccs
     val outdir from outdir_lima
     file ccs_bam from ccs_out
     file primers from primers_file
@@ -73,7 +73,7 @@ process run_lima{
     output:
     file "${name}.demux.ccs.*"
     file "${name}.demux.ccs.primer_5p--primer_3p.bam" into lima_out
-    val name into sample_id
+    val name into sample_id_lima
 
     
     """
@@ -89,14 +89,14 @@ process cluster_reads{
     publishDir "$outdir/cluster", mode: 'copy'
 
     input:
-    val name from sample_id
+    val name from sample_id_lima
     val outdir from outdir_cluster
     file lima_demux from lima_out
     
     output:
     file "${name}.unpolished.*"
     file "${name}.unpolished.bam" into cluster_out
-    val name into sample_id
+    val name into sample_id_cluster
 
 
     """
@@ -121,7 +121,7 @@ process polish_reads{
     output:
     file "${name}.polished.*"
     file "${name}.polished.hq.fastq.gz" into polish_out
-    val name into sample_id
+    val name into sample_id_polish
     
     """
     time isoseq3 polish $cluster_bam ${name}.bam ${name}.polished.bam
@@ -165,7 +165,7 @@ process align_reads{
     publishDir "$params.outdir/alignment", mode: 'copy'
 
     input:
-    val name from sample_id
+    val name from sample_id_polish
     val intron_max from params.intron_max
     val transcript_max from params.transcript_max
     file index from star_index
@@ -176,7 +176,7 @@ process align_reads{
     output:
     file "${name}.*" into star_out
     file "${name}.{bam, bam.bai}" into bam_files
-    val name into sample_id
+    val name into sample_id_align
 
 
     """"
@@ -219,7 +219,7 @@ process bam_to_bed{
     publishDir "$params.outdir/bed", mode: 'copy'
 
     input:
-    val name from sample_id
+    val name from sample_id_align
     file bam, bam_index from bam_files
     val outdir from outdir_bed
     // file '$name.bam' from bam_files
