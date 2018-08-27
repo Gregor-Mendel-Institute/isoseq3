@@ -143,9 +143,9 @@ process polish_reads{
 
 process build_index{
 
-    tag "STARlong index: $params.index"
+    tag "STARlong index: $params.star_index"
 
-    storeDir "$params.index"
+    storeDir "$params.index_dir/$params.star_index"
 
     input:
     file annotation from params.annotation
@@ -156,7 +156,7 @@ process build_index{
     file 'Log.out' into log
 
     """
-    mkdir -p $params.index
+    mkdir -p $params.star_index
     STARlong --runThreadN ${task.cpus} \
         --runMode genomeGenerate \
         --genomeDir ${params.genome} \
