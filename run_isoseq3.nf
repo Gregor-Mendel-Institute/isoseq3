@@ -231,7 +231,7 @@ process bam_to_bed{
 
     input:
     val name from sample_id_align
-    file bam, file bam_index from bam_files
+    set file(bam), file(bam_index) from bam_files
     val outdir from outdir_bed
     // file '$name.bam' from bam_files
 
