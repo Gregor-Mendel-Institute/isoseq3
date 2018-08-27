@@ -11,6 +11,17 @@ params.index = params.genome ? params.genomes[ params.genome ].index ?: false : 
 params.intron_max = params.genome ? params.genomes[ params.genome ].intron_max ?: false : false
 params.transcript_max = params.genome ? params.genomes[ params.genome ].transcript_max ?: false : false
 
+
+log.info "ISO-SEQ3 N F  ~  version 0.1"
+log.info "====================================="
+log.info "input paths: ${params.input}"
+log.info "genome: ${params.genome}"
+log.info "annotation: ${params.annotation}"
+log.info "fasta: ${params.fasta}"
+log.info "intron max length: ${params.intron_max}"
+log.info "transcript max length: ${params.transcript_max}"
+log.info "\n"
+
 Channel
     .fromFilePairs(params.input + '*.{bam,bam.pbi}') { file -> file.name.replaceAll(/.bam|.pbi$/,'') }
     .ifEmpty { error "Cannot find matching bam and pbi files: $params.input." }
@@ -175,7 +186,7 @@ process align_reads{
 
     output:
     file "${name}.*" into star_out
-    file "${name}.{bam, bam.bai}" into bam_files
+    file "${name}.{bam,bam.bai}" into bam_files
     val name into sample_id_align
 
 
@@ -220,7 +231,7 @@ process bam_to_bed{
 
     input:
     val name from sample_id_align
-    file bam, bam_index from bam_files
+    file bam, file bam_index from bam_files
     val outdir from outdir_bed
     // file '$name.bam' from bam_files
 
