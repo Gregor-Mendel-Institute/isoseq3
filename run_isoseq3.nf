@@ -5,9 +5,10 @@ params.input = '/lustre/scratch/users/falko.hofmann/isoseq/*/'
 //params.outdir = '/lustre/scratch/users/falko.hofmann/isoseq/test/results'
 params.primers = '/lustre/scratch/users/falko.hofmann/pipelines/isoseq3/primers.fasta'
 params.genome = 'TAIR10'
+params.index_dir =  params.genome ? params.genomes[ params.genome ].index_dir ?: false : false
+params.star_index = params.genome ? params.genomes[ params.genome ].star_index ?: false : false
 params.annotation = params.genome ? params.genomes[ params.genome ].annotation ?: false : false
 params.fasta = params.genome ? params.genomes[ params.genome ].fasta ?: false : false
-params.star_index = params.genome ? params.genomes[ params.genome ].star_index ?: false : false
 params.intron_max = params.genome ? params.genomes[ params.genome ].intron_max ?: false : false
 params.transcript_max = params.genome ? params.genomes[ params.genome ].transcript_max ?: false : false
 
@@ -151,7 +152,7 @@ process build_index{
     input:
     file annotation from params.annotation
     file fasta from params.fasta
-    var genome_dir from params.star_index
+    val genome_dir from params.star_index
 
     output:
     file "${params.genome}.*" into star_index
