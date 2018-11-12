@@ -42,9 +42,15 @@ Channel
 //     .set {input_pbi}
 
 Channel
-    .fromPath(params.primers)
-    .ifEmpty { error "Cannot find primer file: $params.primers" }
-    .set {primers_file}
+    .fromPath(params.fasta)
+    .ifEmpty { error "Cannot find fasta files: $params.fasta" }
+    .set {fasta_files}
+
+
+Channel
+    .fromFilePairs(params.input + '*.{bam,bam.pbi}') { file -> file.name.replaceAll(/.bam|.pbi$/,'') }
+    .ifEmpty { error "Cannot find matching bam and pbi files: $params.input." }
+    .into {input_ccs; input_polish}
 
 
 process run_ccs{
@@ -151,11 +157,11 @@ process build_index{
 
     input:
     file annotation from params.annotation
-    file fasta from params.fasta
+    file fasta from fasta_files
     val genome_dir from params.star_index
 
     output:
-    file "${params.genome}.*" into star_index
+    file "${genome_dir}.*" into sl_index
     file 'Log.out' into log
 
     """
