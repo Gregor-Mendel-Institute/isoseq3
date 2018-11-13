@@ -30,11 +30,9 @@ Channel
     .into {input_ccs; input_polish}
 // see https://github.com/nextflow-io/patterns/blob/926d8bdf1080c05de406499fb3b5a0b1ce716fcb/process-per-file-pairs/main2.nf
 
-
 Channel
     .fromPath(params.input + '/results')
     .into {outdir_ccs; outdir_lima; outdir_cluster; outdir_polish; outdir_alignment; outdir_bed}
-
 
 // Channel
 //     .fromPath(params.input + '.pbi')
@@ -42,15 +40,20 @@ Channel
 //     .set {input_pbi}
 
 Channel
-    .fromPath(params.fasta)
-    .ifEmpty { error "Cannot find fasta files: $params.fasta" }
-    .set {fasta_files}
-
+    .fromPath(params.primers)
+    .ifEmpty { error "Cannot find primer file: $params.primers" }
+    .set {primers_file}
 
 Channel
-    .fromFilePairs(params.input + '*.{bam,bam.pbi}') { file -> file.name.replaceAll(/.bam|.pbi$/,'') }
-    .ifEmpty { error "Cannot find matching bam and pbi files: $params.input." }
-    .into {input_ccs; input_polish}
+    .fromPath(params.fasta)
+    .ifEmpty { error "Cannot find fasta files: $params.fasta" }
+    .collectFile(name: 'merged.fa', newLine: true)
+    .set {fasta_files}
+
+Channel
+    .fromPath(params.annotation)
+    .ifEmpty { error "Cannot find annotation file: $params.annotation" }
+    .set {annotation_file}
 
 
 process run_ccs{
@@ -156,7 +159,7 @@ process build_index{
     storeDir "$params.index_dir/$params.star_index"
 
     input:
-    file annotation from params.annotation
+    file annotation from annotation_file
     file fasta from fasta_files
     val genome_dir from params.star_index
 
@@ -188,7 +191,7 @@ process align_reads{
     val name from sample_id_polish
     val intron_max from params.intron_max
     val transcript_max from params.transcript_max
-    file index from star_index
+    file index from sl_index
     file hq_fastq from polish_out
     val outdir from outdir_alignment
 
