@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 
 params.input = '/lustre/scratch/users/falko.hofmann/isoseq/*/'
-//params.outdir = '/lustre/scratch/users/falko.hofmann/isoseq/test/results'
+params.outdir = '/lustre/scratch/users/falko.hofmann/isoseq/test/results'
 params.primers = '/lustre/scratch/users/falko.hofmann/pipelines/isoseq3/primers.fasta'
 params.genome = 'TAIR10'
 params.index_dir =  params.genome ? params.genomes[ params.genome ].index_dir ?: false : false
@@ -15,12 +15,13 @@ log.info "ISO-SEQ3 N F  ~  version 0.1"
 log.info "====================================="
 log.info "input paths: ${params.input}"
 log.info "genome: ${params.genome}"
-log.info "annotation: ${params.annotation}"
-log.info "fasta: ${params.fasta}"
-log.info "index: ${params.star_index}"
+log.info "genome annotation: ${params.annotation}"
+log.info "genome sequence: ${params.fasta}"
+log.info "index location: ${$params.index_dir}/${params.star_index}"
 log.info "intron max length: ${params.intron_max}"
 log.info "transcript max length: ${params.transcript_max}"
 log.info "\n"
+
 
 Channel
     .fromFilePairs(params.input + '*.{bam,bam.pbi}') { file -> file.name.replaceAll(/.bam|.pbi$/,'') }
@@ -42,10 +43,13 @@ Channel
     .ifEmpty { error "Cannot find primer file: $params.primers" }
     .set {primers_file}
 
+
+
+// Channels for index building
 Channel
     .fromPath(params.fasta)
     .ifEmpty { error "Cannot find fasta files: $params.fasta" }
-    .collectFile(name: 'merged.fa', newLine: true, )
+    .collectFile(name: 'merged.fa', newLine: true, sort: true)
     .set {fasta_files}
 
 Channel
