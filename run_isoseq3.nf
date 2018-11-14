@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 
-params.input = '/lustre/scratch/users/falko.hofmann/isoseq/*/'
+params.input = '/lustre/scratch/users/falko.hofmann/isoseq/test/'
 params.outdir = '/lustre/scratch/users/falko.hofmann/isoseq/test/results'
 params.primers = '/lustre/scratch/users/falko.hofmann/pipelines/isoseq3/primers.fasta'
 params.genome = 'TAIR10'
@@ -17,7 +17,7 @@ log.info "input paths: ${params.input}"
 log.info "genome: ${params.genome}"
 log.info "genome annotation: ${params.annotation}"
 log.info "genome sequence: ${params.fasta}"
-log.info "index location: ${$params.index_dir}/${params.star_index}"
+log.info "index location: ${params.index_dir}/${params.star_index}"
 log.info "intron max length: ${params.intron_max}"
 log.info "transcript max length: ${params.transcript_max}"
 log.info "\n"
