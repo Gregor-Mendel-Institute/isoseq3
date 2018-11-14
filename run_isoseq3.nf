@@ -1,6 +1,5 @@
 #!/usr/bin/env nextflow
 
-
 params.input = '/lustre/scratch/users/falko.hofmann/isoseq/*/'
 //params.outdir = '/lustre/scratch/users/falko.hofmann/isoseq/test/results'
 params.primers = '/lustre/scratch/users/falko.hofmann/pipelines/isoseq3/primers.fasta'
@@ -11,7 +10,6 @@ params.annotation = params.genome ? params.genomes[ params.genome ].annotation ?
 params.fasta = params.genome ? params.genomes[ params.genome ].fasta ?: false : false
 params.intron_max = params.genome ? params.genomes[ params.genome ].intron_max ?: false : false
 params.transcript_max = params.genome ? params.genomes[ params.genome ].transcript_max ?: false : false
-
 
 log.info "ISO-SEQ3 N F  ~  version 0.1"
 log.info "====================================="
@@ -47,7 +45,7 @@ Channel
 Channel
     .fromPath(params.fasta)
     .ifEmpty { error "Cannot find fasta files: $params.fasta" }
-    .collectFile(name: 'merged.fa', newLine: true)
+    .collectFile(name: 'merged.fa', newLine: true, )
     .set {fasta_files}
 
 Channel
@@ -151,12 +149,12 @@ process polish_reads{
 
 }
 
-
+// TODO make run conditional
 process build_index{
 
     tag "STARlong index: $params.star_index"
 
-    storeDir "$params.index_dir/$params.star_index"
+    storeDir "$params.index_dir"
 
     input:
     file annotation from annotation_file
@@ -164,7 +162,7 @@ process build_index{
     val genome_dir from params.star_index
 
     output:
-    file "${genome_dir}.*" into sl_index
+    file "${genome_dir}" into sl_index
     file 'Log.out' into log
 
     """
