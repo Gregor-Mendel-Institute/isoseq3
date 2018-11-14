@@ -33,17 +33,10 @@ Channel
     .fromPath(params.input + '/results')
     .into {outdir_ccs; outdir_lima; outdir_cluster; outdir_polish; outdir_alignment; outdir_bed}
 
-// Channel
-//     .fromPath(params.input + '.pbi')
-//     .ifEmpty { error "Cannot find matching bam.pbi files: $params.input. Make sure your pacbio file is indexed" }
-//     .set {input_pbi}
-
 Channel
     .fromPath(params.primers)
     .ifEmpty { error "Cannot find primer file: $params.primers" }
     .set {primers_file}
-
-
 
 // Channels for index building
 Channel
@@ -67,7 +60,6 @@ process run_ccs{
         input:
         val outdir from outdir_ccs
         set name, file(bam) from input_ccs
-        //file ccs_input from input_ccs
 
         output:
         file "${name}.ccs.*"
@@ -204,7 +196,7 @@ process align_reads{
     val name into sample_id_align
 
 
-    """"
+    """
     time STARlong --readFilesIn ${hq_fastq} --genomeDir $index \
         --runMode alignReads \
         --runThreadN ${task.cpus}
