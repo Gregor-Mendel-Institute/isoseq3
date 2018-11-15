@@ -192,21 +192,22 @@ process align_reads{
 
     output:
     file "${name}.*" into star_out
-    file "${name}.{bam,bam.bai}" into bam_files
-    val name into sample_id_align
+    file "${name}.Aligned.sortedByCoord.out.{bam,bam.bai}" into bam_files
+    val "${name}.Aligned.sortedByCoord.out"  into sample_id_align
 
 
     """
     time STARlong --readFilesIn ${hq_fastq} --genomeDir $index \
+	--readFilesCommand zcat \
         --runMode alignReads \
-        --runThreadN ${task.cpus}
+        --runThreadN ${task.cpus} \
         --outSAMattributes NH HI NM MD \
         --readNameSeparator space \
         --outFilterMultimapScoreRange 1 \
         --outFilterMismatchNmax 1000 \
         --alignIntronMax $intron_max \
         --alignMatesGapMax $transcript_max \
-        --limitBAMsortRAM ${task.memory} \
+        --limitBAMsortRAM 0 \
         --genomeLoad NoSharedMemory \
         --scoreGapNoncan -20 \
         --scoreGapGCAG -4 \
@@ -222,9 +223,10 @@ process align_reads{
         --alignTranscriptsPerReadNmax 100000 \
         --alignTranscriptsPerWindowNmax 10000 \
         --outSAMtype BAM SortedByCoordinate \
-        --outFileNamePrefix ${name}
-    
-    samtools index ${name}.bam
+        --outFileNamePrefix ${name}.
+
+    samtools index ${name}.Aligned.sortedByCoord.out.bam   
+ 
     """
 }
 
