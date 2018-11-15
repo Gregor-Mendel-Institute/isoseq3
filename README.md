@@ -4,7 +4,7 @@ This is a [nextflow](https://github.com/nextflow-io/nextflow) implementation of 
 ## Setup
 ### Requirements
 This pipeline requires:
-1. [IsoSeq3](https://github.com/PacificBiosciences/IsoSeq3).
+1. [IsoSeq3](https://github.com/PacificBiosciences/IsoSeq3)
 2. [STAR](https://github.com/alexdobin/STAR/)
 3. [samtools](https://github.com/samtools/samtools) 
 4. [bedtools2](https://github.com/arq5x/bedtools2)
