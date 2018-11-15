@@ -1,9 +1,8 @@
 #!/usr/bin/env nextflow
-
-params.input = '/lustre/scratch/users/falko.hofmann/isoseq/test/'
-params.outdir = '/lustre/scratch/users/falko.hofmann/isoseq/test/results'
-params.primers = '/lustre/scratch/users/falko.hofmann/pipelines/isoseq3/primers.fasta'
-params.genome = 'TAIR10'
+//params.input = '/lustre/scratch/users/falko.hofmann/isoseq/test/'
+//params.outdir = '/lustre/scratch/users/falko.hofmann/isoseq/test/results'
+//params.primers = '/lustre/scratch/users/falko.hofmann/pipelines/isoseq3/primers.fasta'
+//params.genome = 'TAIR10'
 params.index_dir =  params.genome ? params.genomes[ params.genome ].index_dir ?: false : false
 params.star_index = params.genome ? params.genomes[ params.genome ].star_index ?: false : false
 params.annotation = params.genome ? params.genomes[ params.genome ].annotation ?: false : false
@@ -11,7 +10,7 @@ params.fasta = params.genome ? params.genomes[ params.genome ].fasta ?: false : 
 params.intron_max = params.genome ? params.genomes[ params.genome ].intron_max ?: false : false
 params.transcript_max = params.genome ? params.genomes[ params.genome ].transcript_max ?: false : false
 
-log.info "ISO-SEQ3 N F  ~  version 0.1"
+log.info "IsoSeq3 NF  ~  version 0.1"
 log.info "====================================="
 log.info "input paths: ${params.input}"
 log.info "genome: ${params.genome}"
@@ -22,7 +21,7 @@ log.info "intron max length: ${params.intron_max}"
 log.info "transcript max length: ${params.transcript_max}"
 log.info "\n"
 
-
+// input channels
 Channel
     .fromFilePairs(params.input + '*.{bam,bam.pbi}') { file -> file.name.replaceAll(/.bam|.pbi$/,'') }
     .ifEmpty { error "Cannot find matching bam and pbi files: $params.input." }
