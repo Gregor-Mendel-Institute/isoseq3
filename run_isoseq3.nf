@@ -1,8 +1,4 @@
 #!/usr/bin/env nextflow
-//params.input = '/lustre/scratch/users/falko.hofmann/isoseq/test/'
-//params.outdir = '/lustre/scratch/users/falko.hofmann/isoseq/test/results'
-//params.primers = '/lustre/scratch/users/falko.hofmann/pipelines/isoseq3/primers.fasta'
-//params.genome = 'TAIR10'
 params.index_dir =  params.genome ? params.genomes[ params.genome ].index_dir ?: false : false
 params.star_index = params.genome ? params.genomes[ params.genome ].star_index ?: false : false
 params.annotation = params.genome ? params.genomes[ params.genome ].annotation ?: false : false
