@@ -50,10 +50,9 @@ process run_ccs{
 
         tag "ccs: $name"
 
-        publishDir "$outdir/ccs", mode: 'copy'
+        publishDir "$params.outdir/ccs", mode: 'copy'
 
         input:
-        val outdir from outdir_ccs
         set name, file(bam) from input_ccs
 
         output:
@@ -62,7 +61,7 @@ process run_ccs{
         file "${name}.ccs.bam" into ccs_out
         val name into sample_id_ccs
     
-
+        //TODO increase number of passes. Using passes 1 for debugging reasons only.
         """
         time ccs ${name}.bam ${name}.ccs.bam --noPolish --minPasses 1
         """
@@ -73,7 +72,7 @@ process run_lima{
 
     tag "lima: $name"
 
-    publishDir "$outdir/lima", mode: 'copy'
+    publishDir "$params.outdir/lima", mode: 'copy'
 
     input:
     val name from sample_id_ccs
@@ -97,11 +96,10 @@ process run_lima{
 process cluster_reads{
 
     tag "clustering : $name"
-    publishDir "$outdir/cluster", mode: 'copy'
+    publishDir "$params.outdir/cluster", mode: 'copy'
 
     input:
     val name from sample_id_lima
-    val outdir from outdir_cluster
     file lima_demux from lima_out
     
     output:
@@ -120,11 +118,10 @@ process polish_reads{
     
     tag "polishing : $name"
 
-    publishDir "$outdir/polish", mode: 'copy'
+    publishDir "$params.outdir/polish", mode: 'copy'
 
     input:
     set name, file(bam) from input_polish
-    val outdir from outdir_polish
     file cluster_bam from cluster_out
     // file pbi from input_pbi
     // file all_reads_bam from input_polish
@@ -182,7 +179,6 @@ process align_reads{
     val transcript_max from params.transcript_max
     file index from sl_index
     file hq_fastq from polish_out
-    val outdir from outdir_alignment
 
 
     output:
