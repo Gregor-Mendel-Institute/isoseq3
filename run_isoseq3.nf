@@ -62,9 +62,9 @@ process run_ccs{
         file "${name}.ccs.bam" into ccs_out
         val name into sample_id_ccs
     
-        //TODO increase number of passes. Using passes 1 for debugging reasons only.
+        //TODO make minPasses param as parameter
         """
-        time ccs ${name}.bam ${name}.ccs.bam --noPolish --minPasses 1
+        ccs ${name}.bam ${name}.ccs.bam --noPolish --minPasses 2
         """
 }
 
@@ -87,7 +87,7 @@ process run_lima{
 
     
     """
-    time lima $ccs_bam $primers ${name}.demux.ccs.bam --isoseq --no-pbi --dump-clips --dump-removed
+    lima $ccs_bam $primers ${name}.demux.ccs.bam --isoseq --no-pbi --dump-clips --dump-removed
     """
 
 }
@@ -109,7 +109,7 @@ process cluster_reads{
 
 
     """
-    time isoseq3 cluster $lima_demux ${name}.unpolished.bam --require-polya --verbose 
+    isoseq3 cluster $lima_demux ${name}.unpolished.bam --require-polya --verbose 
     """
 }
 
@@ -132,7 +132,7 @@ process polish_reads{
     val name into sample_id_polish
     
     """
-    time isoseq3 polish $cluster_bam ${name}.bam ${name}.polished.bam
+    isoseq3 polish $cluster_bam ${name}.bam ${name}.polished.bam
     """
 
 }
