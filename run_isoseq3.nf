@@ -9,6 +9,7 @@ params.transcript_max = params.genome ? params.genomes[ params.genome ].transcri
 log.info "IsoSeq3 NF  ~  version 0.1"
 log.info "====================================="
 log.info "input paths: ${params.input}"
+log.info "output paths: ${params.output}"
 log.info "genome: ${params.genome}"
 log.info "genome annotation: ${params.annotation}"
 log.info "genome sequence: ${params.fasta}"
@@ -50,7 +51,7 @@ process run_ccs{
 
         tag "ccs: $name"
 
-        publishDir "$params.outdir/ccs", mode: 'copy'
+        publishDir "$params.input/ccs", mode: 'copy'
 
         input:
         set name, file(bam) from input_ccs
@@ -72,11 +73,10 @@ process run_lima{
 
     tag "lima: $name"
 
-    publishDir "$params.outdir/lima", mode: 'copy'
+    publishDir "$params.input/lima", mode: 'copy'
 
     input:
     val name from sample_id_ccs
-    val outdir from outdir_lima
     file ccs_bam from ccs_out
     file primers from primers_file
 
@@ -96,7 +96,7 @@ process run_lima{
 process cluster_reads{
 
     tag "clustering : $name"
-    publishDir "$params.outdir/cluster", mode: 'copy'
+    publishDir "$params.input/cluster", mode: 'copy'
 
     input:
     val name from sample_id_lima
@@ -118,7 +118,7 @@ process polish_reads{
     
     tag "polishing : $name"
 
-    publishDir "$params.outdir/polish", mode: 'copy'
+    publishDir "$params.input/polish", mode: 'copy'
 
     input:
     set name, file(bam) from input_polish
@@ -137,7 +137,6 @@ process polish_reads{
 
 }
 
-// TODO make run conditional
 process build_index{
 
     tag "STARlong index: $params.star_index"
@@ -165,13 +164,11 @@ process build_index{
 }
 
 
-// TODO: implement process for alignment with STARlong
-// TODO: check which files are beeing generated and are needed
 process align_reads{
 
     tag "aligning: $name"
 
-    publishDir "$params.outdir/alignment", mode: 'copy'
+    publishDir "$params.input/alignment", mode: 'copy'
 
     input:
     val name from sample_id_polish
@@ -226,14 +223,12 @@ process bam_to_bed{
     
     tag "bamToBed: $name"
 
-    publishDir "$params.outdir/bed", mode: 'copy'
+    publishDir "$params.input/bed", mode: 'copy'
 
     input:
     val name from sample_id_align
     set file(bam), file(bam_index) from bam_files
-    val outdir from outdir_bed
-    // file '$name.bam' from bam_files
-
+    
     output:
     file "${name}.bed" into bed
 
