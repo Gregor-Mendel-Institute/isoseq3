@@ -25,9 +25,10 @@ Channel
     .into {input_ccs; input_polish}
 // see https://github.com/nextflow-io/patterns/blob/926d8bdf1080c05de406499fb3b5a0b1ce716fcb/process-per-file-pairs/main2.nf
 
+// output channels
 Channel
-    .fromPath(params.input + '/results')
-    .into {outdir_ccs; outdir_lima; outdir_cluster; outdir_polish; outdir_alignment; outdir_bed}
+    .fromPath(params.input, type: 'dir')
+    .into {outdir_ch}
 
 Channel
     .fromPath(params.primers)
@@ -51,14 +52,14 @@ process run_ccs{
 
         tag "ccs: $name"
 
-        publishDir "$params.input/ccs", mode: 'copy'
+        publishDir "$outdir/results/ccs", mode: 'copy'
 
         input:
         set name, file(bam) from input_ccs
+        val outdir from outdir_ch
 
         output:
-        file "${name}.ccs.*"
-        file 'ccs_report.txt'
+        file "*"
         file "${name}.ccs.bam" into ccs_out
         val name into sample_id_ccs
     
@@ -81,7 +82,7 @@ process run_lima{
     file primers from primers_file
 
     output:
-    file "${name}.demux.ccs.*"
+    file "*"
     file "${name}.demux.ccs.primer_5p--primer_3p.bam" into lima_out
     val name into sample_id_lima
 
@@ -103,7 +104,7 @@ process cluster_reads{
     file lima_demux from lima_out
     
     output:
-    file "${name}.unpolished.*"
+    file "*"
     file "${name}.unpolished.bam" into cluster_out
     val name into sample_id_cluster
 
@@ -127,7 +128,7 @@ process polish_reads{
     // file all_reads_bam from input_polish
  
     output:
-    file "${name}.polished.*"
+    file "*"
     file "${name}.polished.hq.fastq.gz" into polish_out
     val name into sample_id_polish
     
@@ -179,9 +180,9 @@ process align_reads{
 
 
     output:
-    file "${name}.*" into star_out
+    file "*"
     file "${name}.Aligned.sortedByCoord.out.{bam,bam.bai}" into bam_files
-    val "${name}.Aligned.sortedByCoord.out"  into sample_id_align
+    val "${name}.Aligned.sortedByCoord.out" into sample_id_align
 
 
     """
