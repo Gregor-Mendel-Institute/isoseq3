@@ -1,0 +1,11 @@
+# You can use this file to create a conda environment for this pipeline:
+#   conda env create -f environment.yml
+name: nf-isoseq
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - isoseq3=3.1
+  - minimap2=2.15
+  - bedtools=2.27.1          

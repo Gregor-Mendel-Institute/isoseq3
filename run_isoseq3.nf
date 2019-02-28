@@ -1,8 +1,6 @@
 #!/usr/bin/env nextflow
-params.index_dir =  params.genome ? params.genomes[ params.genome ].index_dir ?: false : false
-params.star_index = params.genome ? params.genomes[ params.genome ].star_index ?: false : false
-params.annotation = params.genome ? params.genomes[ params.genome ].annotation ?: false : false
-params.fasta = params.genome ? params.genomes[ params.genome ].fasta ?: false : false
+
+params.ref_fasta = params.genome ? params.genomes[ params.genome ].fasta ?: false : false
 params.intron_max = params.genome ? params.genomes[ params.genome ].intron_max ?: false : false
 params.transcript_max = params.genome ? params.genomes[ params.genome ].transcript_max ?: false : false
 
@@ -25,34 +23,17 @@ Channel
     .into {input_ccs; input_polish}
 // see https://github.com/nextflow-io/patterns/blob/926d8bdf1080c05de406499fb3b5a0b1ce716fcb/process-per-file-pairs/main2.nf
 
-// output channels
-Channel
-    .fromPath(params.input, type: 'dir')
-    .into {outdir_ch}
-
 Channel
     .fromPath(params.primers)
     .ifEmpty { error "Cannot find primer file: $params.primers" }
-    .set {primers_file}
-
-// Channels for index building
-Channel
-    .fromPath(params.fasta)
-    .ifEmpty { error "Cannot find fasta files: $params.fasta" }
-    .collectFile(name: 'merged.fa', newLine: true, sort: true)
-    .set {fasta_files}
-
-Channel
-    .fromPath(params.annotation)
-    .ifEmpty { error "Cannot find annotation file: $params.annotation" }
-    .set {annotation_file}
+    .set {primers_remove; primers_refine}
 
 
-process run_ccs{
+process ccs_calling{
 
-        tag "ccs: $name"
-
-        publishDir "$outdir/results/ccs", mode: 'copy'
+        tag "circular consensus sequence calling: $name"
+        
+        publishDir "$params.output/$name/ccs", mode: 'copy'
 
         input:
         set name, file(bam) from input_ccs
@@ -61,56 +42,96 @@ process run_ccs{
         output:
         file "*"
         file "${name}.ccs.bam" into ccs_out
-        val name into sample_id_ccs
+        val name into name_ccs
     
         //TODO make minPasses param as parameter
         """
-        ccs ${name}.bam ${name}.ccs.bam --noPolish --minPasses 2
+        ccs ${name}.bam ${name}.ccs.bam --noPolish --minPasses 1
         """
 }
 
 
-process run_lima{
+process primers_rm{
 
-    tag "lima: $name"
+    tag "primer removal: $name"
 
-    publishDir "$params.input/lima", mode: 'copy'
+    publishDir "$params.output/$name/lima", mode: 'copy'
 
     input:
-    val name from sample_id_ccs
+    val name from name_ccs
     file ccs_bam from ccs_out
-    file primers from primers_file
+    file primers from primers_remove
 
     output:
     file "*"
-    file "${name}.demux.ccs.primer_5p--primer_3p.bam" into lima_out
-    val name into sample_id_lima
+    file "${name}.fl.primer_5p--primer_3p.bam" into primers_removed
+    val name into name_primers_rm
 
+    """
+    lima $ccs_bam $primers ${name}.fl.bam --isoseq --no-pbi
+    """
+}
+
+
+process run_refine{
+
+    tag "refining : $name"
+    publishDir "$params.output/$name/refine", mode: 'copy'
+
+    input:
+    val name from name_primers_rm
+    file p_rm_bam from primers_removed
+    file primers from primers_refine
     
+    output:
+    file "*"
+    file "${name}.flnc.bam" into refine_out
+    file "${name}.flnc.bam" into refine_merge_out
+    val name into name_refine
+
+    //TODO update input & output channels
     """
-    lima $ccs_bam $primers ${name}.demux.ccs.bam --isoseq --no-pbi --dump-clips --dump-removed
+    isoseq3 refine $p_rm_bam $primers ${name}.flnc.bam --require-polya
     """
 
+}
+
+
+process merge_samples{
+
+    tag "merging SMRT cells"
+
+    publishDir "$params.input/merged", mode: 'copy'
+
+    input:
+    file '*.bam' from refine_merge_out.collect()
+
+    output:
+    file "merged.flnc.xml" into merge_out
+    val "merged" into name_merge_out
+
+    """
+    dataset create --type TranscriptSet merged.flnc.xml *.bam
+    """
 }
 
 
 process cluster_reads{
 
     tag "clustering : $name"
-    publishDir "$params.input/cluster", mode: 'copy'
+    publishDir "$params.output/$name/cluster", mode: 'copy'
 
     input:
-    val name from sample_id_lima
-    file lima_demux from lima_out
-    
+    file refined from refine_out.concat(merge_out)
+    val name from name_refine.concat(name_merge_out)
+
     output:
     file "*"
     file "${name}.unpolished.bam" into cluster_out
-    val name into sample_id_cluster
-
+    val name into name_cluster
 
     """
-    isoseq3 cluster $lima_demux ${name}.unpolished.bam --require-polya --verbose 
+    isoseq3 cluster $refined ${name}.unpolished.bam --verbose 
     """
 }
 
@@ -130,7 +151,7 @@ process polish_reads{
     output:
     file "*"
     file "${name}.polished.hq.fastq.gz" into polish_out
-    val name into sample_id_polish
+    val name into name_polish
     
     """
     isoseq3 polish $cluster_bam ${name}.bam ${name}.polished.bam
@@ -138,86 +159,110 @@ process polish_reads{
 
 }
 
-process build_index{
+process minimap_reads{
 
-    tag "STARlong index: $params.star_index"
-
-    storeDir "$params.index_dir"
+    tag "mapping : $name"
 
     input:
-    file annotation from annotation_file
-    file fasta from fasta_files
-    val genome_dir from params.star_index
 
     output:
-    file "${genome_dir}" into sl_index
-    file 'Log.out' into log
 
     """
-    mkdir -p ${genome_dir}
-    STARlong --runThreadN ${task.cpus} \
-        --runMode genomeGenerate \
-        --genomeDir ${genome_dir} \
-        --genomeFastaFiles ${fasta} \
-        --sjdbGTFfile ${annotation}
+    minimap2 $params.ref_fasta $sample \
+        -G $params.intron_max \
+        -H \
+        -ax splice \
+        -C 5 \
+        -u f \
+        -p 0.9 \
+        -t ${task.cpus}
     """
+
+
 
 }
 
 
-process align_reads{
+// process build_index{
 
-    tag "aligning: $name"
+//     tag "STARlong index: $params.star_index"
 
-    publishDir "$params.input/alignment", mode: 'copy'
+//     storeDir "$params.index_dir"
 
-    input:
-    val name from sample_id_polish
-    val intron_max from params.intron_max
-    val transcript_max from params.transcript_max
-    file index from sl_index
-    file hq_fastq from polish_out
+//     input:
+//     file annotation from annotation_file
+//     file fasta from fasta_files
+//     val genome_dir from params.star_index
+
+//     output:
+//     file "${genome_dir}" into sl_index
+//     file 'Log.out' into log
+
+//     """
+//     mkdir -p ${genome_dir}
+//     STARlong --runThreadN ${task.cpus} \
+//         --runMode genomeGenerate \
+//         --genomeDir ${genome_dir} \
+//         --genomeFastaFiles ${fasta} \
+//         --sjdbGTFfile ${annotation}
+//     """
+
+// }
 
 
-    output:
-    file "*"
-    file "${name}.Aligned.sortedByCoord.out.{bam,bam.bai}" into bam_files
-    val "${name}.Aligned.sortedByCoord.out" into sample_id_align
+// process align_reads{
+
+//     tag "aligning: $name"
+
+//     publishDir "$params.input/alignment", mode: 'copy'
+
+//     input:
+//     val name from name_polish
+//     val intron_max from params.intron_max
+//     val transcript_max from params.transcript_max
+//     file index from sl_index
+//     file hq_fastq from polish_out
 
 
-    """
-    time STARlong --readFilesIn ${hq_fastq} --genomeDir $index \
-	--readFilesCommand zcat \
-        --runMode alignReads \
-        --runThreadN ${task.cpus} \
-        --outSAMattributes NH HI NM MD \
-        --readNameSeparator space \
-        --outFilterMultimapScoreRange 1 \
-        --outFilterMismatchNmax 1000 \
-        --alignIntronMax $intron_max \
-        --alignMatesGapMax $transcript_max \
-        --limitBAMsortRAM 0 \
-        --genomeLoad NoSharedMemory \
-        --scoreGapNoncan -20 \
-        --scoreGapGCAG -4 \
-        --scoreGapATAC -8 \
-        --scoreDelOpen -1 \
-        --scoreDelBase -1 \
-        --scoreInsOpen -1 \
-        --scoreInsBase -1 \
-        --alignEndsType Local \
-        --seedSearchStartLmax 50 \
-        --seedPerReadNmax 100000 \
-        --seedPerWindowNmax 1000 \
-        --alignTranscriptsPerReadNmax 100000 \
-        --alignTranscriptsPerWindowNmax 10000 \
-        --outSAMtype BAM SortedByCoordinate \
-        --outFileNamePrefix ${name}.
+//     output:
+//     file "*"
+//     file "${name}.Aligned.sortedByCoord.out.{bam,bam.bai}" into bam_files
+//     val "${name}.Aligned.sortedByCoord.out" into name_align
 
-    samtools index ${name}.Aligned.sortedByCoord.out.bam   
+
+//     """
+//     time STARlong --readFilesIn ${hq_fastq} --genomeDir $index \
+// 	--readFilesCommand zcat \
+//         --runMode alignReads \
+//         --runThreadN ${task.cpus} \
+//         --outSAMattributes NH HI NM MD \
+//         --readNameSeparator space \
+//         --outFilterMultimapScoreRange 1 \
+//         --outFilterMismatchNmax 1000 \
+//         --alignIntronMax $intron_max \
+//         --alignMatesGapMax $transcript_max \
+//         --limitBAMsortRAM 0 \
+//         --genomeLoad NoSharedMemory \
+//         --scoreGapNoncan -20 \
+//         --scoreGapGCAG -4 \
+//         --scoreGapATAC -8 \
+//         --scoreDelOpen -1 \
+//         --scoreDelBase -1 \
+//         --scoreInsOpen -1 \
+//         --scoreInsBase -1 \
+//         --alignEndsType Local \
+//         --seedSearchStartLmax 50 \
+//         --seedPerReadNmax 100000 \
+//         --seedPerWindowNmax 1000 \
+//         --alignTranscriptsPerReadNmax 100000 \
+//         --alignTranscriptsPerWindowNmax 10000 \
+//         --outSAMtype BAM SortedByCoordinate \
+//         --outFileNamePrefix ${name}.
+
+//     samtools index ${name}.Aligned.sortedByCoord.out.bam   
  
-    """
-}
+//     """
+// }
 
 
 process bam_to_bed{
@@ -227,7 +272,7 @@ process bam_to_bed{
     publishDir "$params.input/bed", mode: 'copy'
 
     input:
-    val name from sample_id_align
+    val name from name_align
     set file(bam), file(bam_index) from bam_files
     
     output:
