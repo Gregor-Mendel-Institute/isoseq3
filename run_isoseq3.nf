@@ -37,9 +37,6 @@ Channel
     .ifEmpty { error "Cannot find primer file: $params.primers" }
     .set {ref_fasta}
 
-
-
-
 process ccs_calling{
 
         tag "circular consensus sequence calling: $name"
@@ -183,7 +180,9 @@ process align_reads{
     val name from name_polish
 
     output:
-    file "*"
+    
+    file "${name}.aln.bam" into aligned
+
 
     when:
     params.align
@@ -196,112 +195,32 @@ process align_reads{
         -C 5 \
         -u f \
         -p 0.9 \
-        -t ${task.cpus} > $name.paf
-    """
+        -t ${task.cpus} > ${name}.aln.sam \
+        2> ${name}.log
 
+    samtools view -Sb ${name}.aln.sam > ${name}.aln.bam
 
+    bedtools bamtobed -bed12 -i ${name}.aln.bam > ${name}.aln.bed
 
-}
-
-
-// process build_index{
-
-//     tag "STARlong index: $params.star_index"
-
-//     storeDir "$params.index_dir"
-
-//     input:
-//     file annotation from annotation_file
-//     file fasta from fasta_files
-//     val genome_dir from params.star_index
-
-//     output:
-//     file "${genome_dir}" into sl_index
-//     file 'Log.out' into log
-
-//     """
-//     mkdir -p ${genome_dir}
-//     STARlong --runThreadN ${task.cpus} \
-//         --runMode genomeGenerate \
-//         --genomeDir ${genome_dir} \
-//         --genomeFastaFiles ${fasta} \
-//         --sjdbGTFfile ${annotation}
-//     """
-
-// }
-
-
-// process align_reads{
-
-//     tag "aligning: $name"
-
-//     publishDir "$params.input/alignment", mode: 'copy'
-
-//     input:
-//     val name from name_polish
-//     val intron_max from params.intron_max
-//     val transcript_max from params.transcript_max
-//     file index from sl_index
-//     file hq_fastq from polish_out
-
-
-//     output:
-//     file "*"
-//     file "${name}.Aligned.sortedByCoord.out.{bam,bam.bai}" into bam_files
-//     val "${name}.Aligned.sortedByCoord.out" into name_align
-
-
-//     """
-//     time STARlong --readFilesIn ${hq_fastq} --genomeDir $index \
-// 	--readFilesCommand zcat \
-//         --runMode alignReads \
-//         --runThreadN ${task.cpus} \
-//         --outSAMattributes NH HI NM MD \
-//         --readNameSeparator space \
-//         --outFilterMultimapScoreRange 1 \
-//         --outFilterMismatchNmax 1000 \
-//         --alignIntronMax $intron_max \
-//         --alignMatesGapMax $transcript_max \
-//         --limitBAMsortRAM 0 \
-//         --genomeLoad NoSharedMemory \
-//         --scoreGapNoncan -20 \
-//         --scoreGapGCAG -4 \
-//         --scoreGapATAC -8 \
-//         --scoreDelOpen -1 \
-//         --scoreDelBase -1 \
-//         --scoreInsOpen -1 \
-//         --scoreInsBase -1 \
-//         --alignEndsType Local \
-//         --seedSearchStartLmax 50 \
-//         --seedPerReadNmax 100000 \
-//         --seedPerWindowNmax 1000 \
-//         --alignTranscriptsPerReadNmax 100000 \
-//         --alignTranscriptsPerWindowNmax 10000 \
-//         --outSAMtype BAM SortedByCoordinate \
-//         --outFileNamePrefix ${name}.
-
-//     samtools index ${name}.Aligned.sortedByCoord.out.bam   
- 
-//     """
-// }
-
-
-process bam_to_bed{
-    
-    tag "bamToBed: $name"
-
-    publishDir "$params.input/bed", mode: 'copy'
-
-    input:
-    val name from name_align
-    set file(bam), file(bam_index) from bam_files
-    
-    output:
-    file "${name}.bed" into bed
-
-    """   
-    bedtools bamtobed -bed12 -i ${name}.bam > ${name}.bed
     """
 }
+
+// process bam_to_bed{
+    
+//     tag "bamToBed: $name"
+
+//     publishDir "$params.input/bed", mode: 'copy'
+
+//     input:
+//     val name from name_align
+//     set file(bam), file(bam_index) from bam_files
+    
+//     output:
+//     file "${name}.bed" into bed
+
+//     """   
+//     bedtools bamtobed -bed12 -i ${name}.bam > ${name}.bed
+//     """
+// }
 
 // TODO: add processes for staging in and out.
