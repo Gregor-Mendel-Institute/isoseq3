@@ -8,4 +8,5 @@ channels:
 dependencies:
   - isoseq3=3.1
   - minimap2=2.15
-  - bedtools=2.27.1          
+  - bedtools=2.27.1
+  - samtools=1.9
