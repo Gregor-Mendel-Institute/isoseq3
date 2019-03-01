@@ -1,5 +1,9 @@
 #!/usr/bin/env nextflow
 
+
+params.merge = true
+params.align = true
+
 params.ref_fasta = params.genome ? params.genomes[ params.genome ].fasta ?: false : false
 params.intron_max = params.genome ? params.genomes[ params.genome ].intron_max ?: false : false
 params.transcript_max = params.genome ? params.genomes[ params.genome ].transcript_max ?: false : false
@@ -27,6 +31,13 @@ Channel
     .fromPath(params.primers)
     .ifEmpty { error "Cannot find primer file: $params.primers" }
     .set {primers_remove; primers_refine}
+
+Channel
+    .fromPath(params.ref_fasta)
+    .ifEmpty { error "Cannot find primer file: $params.primers" }
+    .set {ref_fasta}
+
+
 
 
 process ccs_calling{
@@ -110,6 +121,9 @@ process merge_samples{
     file "merged.flnc.xml" into merge_out
     val "merged" into name_merge_out
 
+    when:
+    params.merge
+
     """
     dataset create --type TranscriptSet merged.flnc.xml *.bam
     """
@@ -122,8 +136,8 @@ process cluster_reads{
     publishDir "$params.output/$name/cluster", mode: 'copy'
 
     input:
-    file refined from refine_out.concat(merge_out)
-    val name from name_refine.concat(name_merge_out)
+    file refined from refine_out.mix(merge_out)
+    val name from name_refine.mix(name_merge_out)
 
     output:
     file "*"
@@ -140,14 +154,12 @@ process polish_reads{
     
     tag "polishing : $name"
 
-    publishDir "$params.input/polish", mode: 'copy'
+    publishDir "$params.output/$name/polish", mode: 'copy'
 
     input:
     set name, file(bam) from input_polish
     file cluster_bam from cluster_out
-    // file pbi from input_pbi
-    // file all_reads_bam from input_polish
- 
+
     output:
     file "*"
     file "${name}.polished.hq.fastq.gz" into polish_out
@@ -159,23 +171,32 @@ process polish_reads{
 
 }
 
-process minimap_reads{
+process align_reads{
 
     tag "mapping : $name"
 
+    publishDir "$params.output/$name/minimap2", mode: 'copy'
+
     input:
+    file fasta from ref_fasta
+    file sample from polish_out
+    val name from name_polish
 
     output:
+    file "*"
+
+    when:
+    params.align
 
     """
-    minimap2 $params.ref_fasta $sample \
+    minimap2 $fasta $sample \
         -G $params.intron_max \
         -H \
         -ax splice \
         -C 5 \
         -u f \
         -p 0.9 \
-        -t ${task.cpus}
+        -t ${task.cpus} > $name.paf
     """
 
 
