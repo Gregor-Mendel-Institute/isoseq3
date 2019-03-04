@@ -5,9 +5,9 @@ params.align = true
 params.bookend = false
 
 
-params.ref_fasta = params.genome ? params.genomes[ params.genome ].fasta ?: false : false
-params.intron_max = params.genome ? params.genomes[ params.genome ].intron_max ?: false : false
-params.transcript_max = params.genome ? params.genomes[ params.genome ].transcript_max ?: false : false
+//params.ref_fasta = params.genome ? params.genomes[ params.genome ].fasta ?: false : false
+//params.intron_max = params.genome ? params.genomes[ params.genome ].intron_max ?: false : false
+//params.transcript_max = params.genome ? params.genomes[ params.genome ].transcript_max ?: false : false
 
 log.info "IsoSeq3 NF  ~  version 3.1"
 log.info "====================================="
@@ -103,15 +103,16 @@ process run_refine{
 
 }
 
+refine_merge_out.collect().view()
 
 process merge_samples{
 
     tag "merging SMRT cells"
 
-    publishDir "$params.input/merged", mode: 'copy'
+    publishDir "$params.output/merged", mode: 'copy'
 
     input:
-    file '*.bam' from refine_merge_out.collect()
+    file bam from refine_merge_out.collect()
 
     output:
     file "merged.flnc.xml" into merge_out
@@ -121,7 +122,7 @@ process merge_samples{
     params.merge
 
     """
-    dataset create --type TranscriptSet merged.flnc.xml *.bam
+    dataset create --type TranscriptSet merged.flnc.xml $bam
     """
 }
 
@@ -132,8 +133,8 @@ process cluster_reads{
     publishDir "$params.output/$name/cluster", mode: 'copy'
 
     input:
-    file refined from refine_out.mix(merge_out)
-    val name from name_refine.mix(name_merge_out)
+    file refined from refine_out.concat(merge_out)
+    val name from name_refine.concat(name_merge_out)
 
     output:
     file "*"
@@ -141,7 +142,7 @@ process cluster_reads{
     val name into name_cluster
 
     """
-    isoseq3 cluster $refined ${name}.unpolished.bam --verbose 
+    isoseq3 cluster ${refined} ${name}.unpolished.bam --verbose 
     """
 }
 
@@ -162,7 +163,7 @@ process polish_reads{
     val name into name_polish
     
     """
-    isoseq3 polish $cluster_bam ${name}.bam ${name}.polished.bam
+    isoseq3 polish ${cluster_bam} ${name}.bam ${name}.polished.bam
     """
 
 }
@@ -178,16 +179,14 @@ process align_reads{
     file sample from polish_out
     val name from name_polish
 
-    output:
-    
-    file "${name}.aln.bam" into aligned
-
+    output:    
+    file "*.{bam,bed,log}"
 
     when:
     params.align
 
     """
-    minimap2 $fasta $sample \
+    minimap2 $fasta ${sample} \
         -G $params.intron_max \
         -H \
         -ax splice \
