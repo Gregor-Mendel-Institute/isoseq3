@@ -13,11 +13,8 @@ log.info "====================================="
 log.info "input paths: ${params.input}"
 log.info "output paths: ${params.output}"
 log.info "genome: ${params.genome}"
-log.info "genome annotation: ${params.annotation}"
-log.info "genome sequence: ${params.fasta}"
-log.info "index location: ${params.index_dir}/${params.star_index}"
+log.info "genome sequence: ${params.ref_fasta}"
 log.info "intron max length: ${params.intron_max}"
-log.info "transcript max length: ${params.transcript_max}"
 log.info "\n"
 
 // input channels
@@ -30,7 +27,7 @@ Channel
 Channel
     .fromPath(params.primers)
     .ifEmpty { error "Cannot find primer file: $params.primers" }
-    .set {primers_remove; primers_refine}
+    .into {primers_remove; primers_refine}
 
 Channel
     .fromPath(params.ref_fasta)
@@ -45,7 +42,6 @@ process ccs_calling{
 
         input:
         set name, file(bam) from input_ccs
-        val outdir from outdir_ch
 
         output:
         file "*"
