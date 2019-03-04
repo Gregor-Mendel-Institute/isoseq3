@@ -1,17 +1,20 @@
 #!/usr/bin/env nextflow
 
-
 params.merge = true
 params.align = true
+params.bookend = false
+
 
 params.ref_fasta = params.genome ? params.genomes[ params.genome ].fasta ?: false : false
 params.intron_max = params.genome ? params.genomes[ params.genome ].intron_max ?: false : false
 params.transcript_max = params.genome ? params.genomes[ params.genome ].transcript_max ?: false : false
 
-log.info "IsoSeq3 NF  ~  version 0.1"
+log.info "IsoSeq3 NF  ~  version 3.1"
 log.info "====================================="
 log.info "input paths: ${params.input}"
 log.info "output paths: ${params.output}"
+log.info "merge smrt cells: ${params.merge}"
+log.info "align reads: ${params.align}"
 log.info "genome: ${params.genome}"
 log.info "genome sequence: ${params.ref_fasta}"
 log.info "intron max length: ${params.intron_max}"
@@ -197,7 +200,6 @@ process align_reads{
     samtools view -Sb ${name}.aln.sam > ${name}.aln.bam
 
     bedtools bamtobed -bed12 -i ${name}.aln.bam > ${name}.aln.bed
-
     """
 }
 
