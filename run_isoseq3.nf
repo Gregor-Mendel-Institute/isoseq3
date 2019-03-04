@@ -103,8 +103,6 @@ process run_refine{
 
 }
 
-refine_merge_out.collect().view()
-
 process merge_samples{
 
     tag "merging SMRT cells"
