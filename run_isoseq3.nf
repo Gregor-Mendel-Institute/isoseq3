@@ -50,10 +50,7 @@ process ccs_calling{
         output:
         file "*"
         set val(name), file("${name}.ccs.bam") into ccs_out
-        //file "*"
-        //file "${name}.ccs.bam" into ccs_out
-        //val name into name_ccs
-    
+     
         //TODO make minPasses param as parameter
         """
         ccs ${name}.bam ${name}.ccs.bam --noPolish --minPasses 1
@@ -70,16 +67,11 @@ process primers_rm{
     input:
     set name, file(bam) from ccs_out.dump(tag: 'ccs_name')
     file primers from primers_remove.collect()
-    //val name from name_ccs.dump(tag: 'ccs_name')
-    //file ccs_bam from ccs_out.dump(tag: 'ccs_file')
-    //file primers from primers_remove.collect()
-
+    
     output:
     file "*"
-    //file "${name}.fl.primer_5p--primer_3p.bam" into primers_removed
     set val(name), file("${name}.fl.primer_5p--primer_3p.bam") into primers_removed
-    //val name into name_primers_rm
-
+ 
     """
     lima $bam $primers ${name}.fl.bam --isoseq --no-pbi
     """
@@ -93,18 +85,13 @@ process run_refine{
 
     input:
     set name, file(bam) from primers_removed.dump(tag: 'primers_removed')
-    //val name from name_primers_rm.dump(tag: 'name_primers_rm')
-    //file p_rm_bam from primers_removed.dump(tag: 'bam_primers_rm')
     file primers from primers_refine.collect()
     
     output:
     file "*"
     file("${name}.flnc.bam") into refine_merge_out
     set val(name), file("${name}.flnc.bam") into refine_out
-    //file "${name}.flnc.bam" into refine_out, refine_merge_out
-    //file "${name}.flnc.bam" into refine_merge_out
-    //val name into name_refine
-
+ 
     //TODO update input & output channels
     """
     isoseq3 refine $bam $primers ${name}.flnc.bam --require-polya
@@ -124,8 +111,7 @@ process merge_samples{
 
     output:
     set val("merged"), file("merged.flnc.xml") into merge_out
-    //file "merged.flnc.xml" into merge_out
-    //val "merged" into name_merge_out
+
 
     when:
     params.merge
