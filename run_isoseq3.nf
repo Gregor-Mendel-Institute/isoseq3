@@ -49,8 +49,10 @@ process ccs_calling{
 
         output:
         file "*"
-        file "${name}.ccs.bam" into ccs_out
-        val name into name_ccs
+        set val(name), file("${name}.ccs.bam") into ccs_out
+        //file "*"
+        //file "${name}.ccs.bam" into ccs_out
+        //val name into name_ccs
     
         //TODO make minPasses param as parameter
         """
@@ -66,17 +68,20 @@ process primers_rm{
     publishDir "$params.output/$name/lima", mode: 'copy'
 
     input:
-    val name from name_ccs.dump(tag: 'ccs_name')
-    file ccs_bam from ccs_out.dump(tag: 'ccs_file')
+    set name, file(bam) from ccs_out.dump(tag: 'ccs_name')
     file primers from primers_remove.collect()
+    //val name from name_ccs.dump(tag: 'ccs_name')
+    //file ccs_bam from ccs_out.dump(tag: 'ccs_file')
+    //file primers from primers_remove.collect()
 
     output:
     file "*"
-    file "${name}.fl.primer_5p--primer_3p.bam" into primers_removed
-    val name into name_primers_rm
+    //file "${name}.fl.primer_5p--primer_3p.bam" into primers_removed
+    set val(name), file("${name}.fl.primer_5p--primer_3p.bam") into primers_removed
+    //val name into name_primers_rm
 
     """
-    lima $ccs_bam $primers ${name}.fl.bam --isoseq --no-pbi
+    lima $bam $primers ${name}.fl.bam --isoseq --no-pbi
     """
 }
 
@@ -87,19 +92,22 @@ process run_refine{
     publishDir "$params.output/$name/refine", mode: 'copy'
 
     input:
-    val name from name_primers_rm.dump(tag: 'name_primers_rm')
-    file p_rm_bam from primers_removed.dump(tag: 'bam_primers_rm')
+    set name, file(bam) from primers_removed.dump(tag: 'primers_removed')
+    //val name from name_primers_rm.dump(tag: 'name_primers_rm')
+    //file p_rm_bam from primers_removed.dump(tag: 'bam_primers_rm')
     file primers from primers_refine.collect()
     
     output:
     file "*"
-    file "${name}.flnc.bam" into refine_out, refine_merge_out
+    file("${name}.flnc.bam") into refine_merge_out
+    set val(name), file("${name}.flnc.bam") into refine_out
+    //file "${name}.flnc.bam" into refine_out, refine_merge_out
     //file "${name}.flnc.bam" into refine_merge_out
-    val name into name_refine
+    //val name into name_refine
 
     //TODO update input & output channels
     """
-    isoseq3 refine $p_rm_bam $primers ${name}.flnc.bam --require-polya
+    isoseq3 refine $bam $primers ${name}.flnc.bam --require-polya
     """
 
 }
@@ -112,11 +120,12 @@ process merge_samples{
     publishDir "$params.output/merged", mode: 'copy'
 
     input:
-    file bam from refine_merge_out.collect().dump(tag: 'merge')
+    file(bam) from refine_merge_out.collect().dump(tag: 'merge')
 
     output:
-    file "merged.flnc.xml" into merge_out
-    val "merged" into name_merge_out
+    set val("merged"), file("merged.flnc.xml") into merge_out
+    //file "merged.flnc.xml" into merge_out
+    //val "merged" into name_merge_out
 
     when:
     params.merge
@@ -133,8 +142,9 @@ process cluster_reads{
     publishDir "$params.output/$name/cluster", mode: 'copy'
 
     input:
-    file refined from refine_out.concat(merge_out)
-    val name from name_refine.concat(name_merge_out)
+    set name, file(refined) from refine_out.concat(merge_out).dump(tag: 'cluster concat')
+    //file refined from refine_out.concat(merge_out)
+    //val name from name_refine.concat(name_merge_out)
 
     output:
     file "*"
