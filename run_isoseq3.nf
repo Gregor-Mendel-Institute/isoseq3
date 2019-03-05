@@ -24,6 +24,7 @@ log.info "\n"
 Channel
     .fromFilePairs(params.input + '*.{bam,bam.pbi}') { file -> file.name.replaceAll(/.bam|.pbi$/,'') }
     .ifEmpty { error "Cannot find matching bam and pbi files: $params.input." }
+    .dump(tag: 'input')
     .into {input_ccs; input_polish}
 // see https://github.com/nextflow-io/patterns/blob/926d8bdf1080c05de406499fb3b5a0b1ce716fcb/process-per-file-pairs/main2.nf
 
@@ -65,9 +66,9 @@ process primers_rm{
     publishDir "$params.output/$name/lima", mode: 'copy'
 
     input:
-    val name from name_ccs
-    file ccs_bam from ccs_out
-    file primers from primers_remove
+    val name from name_ccs.dump(tag: 'ccs_name')
+    file ccs_bam from ccs_out.dump(tag: 'ccs_file')
+    file primers from primers_remove.collect()
 
     output:
     file "*"
@@ -86,14 +87,14 @@ process run_refine{
     publishDir "$params.output/$name/refine", mode: 'copy'
 
     input:
-    val name from name_primers_rm
-    file p_rm_bam from primers_removed
-    file primers from primers_refine
+    val name from name_primers_rm.dump(tag: 'name_primers_rm')
+    file p_rm_bam from primers_removed.dump(tag: 'bam_primers_rm')
+    file primers from primers_refine.collect()
     
     output:
     file "*"
-    file "${name}.flnc.bam" into refine_out
-    file "${name}.flnc.bam" into refine_merge_out
+    file "${name}.flnc.bam" into refine_out, refine_merge_out
+    //file "${name}.flnc.bam" into refine_merge_out
     val name into name_refine
 
     //TODO update input & output channels
@@ -103,14 +104,15 @@ process run_refine{
 
 }
 
+
 process merge_samples{
 
-    tag "merging SMRT cells"
+    tag "merging SMRT cells ${bam}"
 
     publishDir "$params.output/merged", mode: 'copy'
 
     input:
-    file bam from refine_merge_out.collect()
+    file bam from refine_merge_out.collect().dump(tag: 'merge')
 
     output:
     file "merged.flnc.xml" into merge_out
@@ -120,7 +122,7 @@ process merge_samples{
     params.merge
 
     """
-    dataset create --type TranscriptSet merged.flnc.xml $bam
+    dataset create --type TranscriptSet merged.flnc.xml ${bam}
     """
 }
 
