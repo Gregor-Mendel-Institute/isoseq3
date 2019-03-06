@@ -169,13 +169,10 @@ process cluster_reads{
 
 Channel
     .from(bam_names)
-    .concat(merge_subreads)
+    .concat(merged_subreads)
     .join(cluster_out)
     .dump(tag: 'polish')
     .set {polish_in}
-
-//polish_in.concat(merged_subreads)
-//polish_in.join(cluster_out)
 
 process polish_reads{
     
@@ -184,7 +181,7 @@ process polish_reads{
     publishDir "$params.output/$name/polish", mode: 'copy'
 
     input:
-    set name, file(unpolished_bam), file(subreads_bam) from polish_in.dump(tag: 'polish')
+    set name, file(subreads_bam), file(unpolished_bam) from polish_in.dump(tag: 'polish')
 
     output:
     file "*"
