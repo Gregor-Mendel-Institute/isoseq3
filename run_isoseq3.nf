@@ -25,13 +25,21 @@ Channel
     .fromFilePairs(params.input + '*.{bam,bam.pbi}') { file -> file.name.replaceAll(/.bam|.pbi$/,'') }
     .ifEmpty { error "Cannot find matching bam and pbi files: $params.input." }
     .dump(tag: 'input')
-    .into {input_ccs; input_polish}
+    //.into {input_ccs; input_polish}
+    .set { input_ccs }
 // see https://github.com/nextflow-io/patterns/blob/926d8bdf1080c05de406499fb3b5a0b1ce716fcb/process-per-file-pairs/main2.nf
 
 Channel
     .fromPath(params.primers)
     .ifEmpty { error "Cannot find primer file: $params.primers" }
-    .into {primers_remove; primers_refine}
+    .into { primers_remove; primers_refine }
+
+Channel
+    .fromPath(params.input + '*.bam')
+    .ifEmpty { error "Cannot find matching bam files: $params.input." }
+    .map{ file -> tuple(file.name.replaceAll(/.bam$/,''), file) }
+    .dump(tag: 'bam')
+    .set { input_polish }
 
 Channel
     .fromPath(params.ref_fasta)
@@ -65,7 +73,7 @@ process primers_rm{
     publishDir "$params.output/$name/lima", mode: 'copy'
 
     input:
-    set name, file(bam) from ccs_out.dump(tag: 'ccs_name')
+    set name, file(bam) from ccs_out//.dump(tag: 'ccs_name')
     file primers from primers_remove.collect()
     
     output:
@@ -84,7 +92,7 @@ process run_refine{
     publishDir "$params.output/$name/refine", mode: 'copy'
 
     input:
-    set name, file(bam) from primers_removed.dump(tag: 'primers_removed')
+    set name, file(bam) from primers_removed//.dump(tag: 'primers_removed')
     file primers from primers_refine.collect()
     
     output:
@@ -141,6 +149,7 @@ process cluster_reads{
     isoseq3 cluster ${refined} ${name}.unpolished.bam --verbose 
     """
 }
+
 
 
 process polish_reads{
