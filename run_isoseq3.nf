@@ -23,8 +23,7 @@ log.info "\n"
 // input channels
 Channel
     .fromFilePairs(params.input + '*.{bam,bam.pbi}') { file -> file.name.replaceAll(/.bam|.pbi$/,'') }
-    .ifEmpty { error "Cannot find matching bam and pbi files: $params.input. Make 
-     sure your bam files are pb indexed." }
+    .ifEmpty { error "Cannot find matching bam and pbi files: $params.input. Make sure your bam files are pb indexed." }
     .set { ccs_in }
 // see https://github.com/nextflow-io/patterns/blob/926d8bdf1080c05de406499fb3b5a0b1ce716fcb/process-per-file-pairs/main2.nf
 
