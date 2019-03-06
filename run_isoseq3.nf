@@ -44,6 +44,11 @@ Channel
     .ifEmpty { error "Cannot find primer file: $params.primers" }
     .set {ref_fasta}
 
+//TODO replace with specific stating of the pbi
+Channel
+    .fromPath(params.input + '*.bam.pbi')
+    .ifEmpty { error "Cannot find matching bam.pbi files: $params.input." }
+    .into { pbi_merge_trans, pbi_merge_sub, pbi_polish }
 
 process ccs_calling{
 
@@ -114,7 +119,8 @@ process merge_transcripts{
     publishDir "$params.output/merged", mode: 'copy'
 
     input:
-    file(bam) from refine_merge_out.collect().dump(tag: 'merge transcripts')
+    file(bam) from refine_merge_out.collect().dump(tag: 'merge transcripts bam')
+    file(bam_pbi) from pbi_merge_trans.collect().dump(tag: 'merge transcripts pbi')
 
     output:
     set val("merged"), file("merged.flnc.xml") into cluster_in
@@ -124,7 +130,6 @@ process merge_transcripts{
 
     """
     dataset create --type TranscriptSet merged.flnc.xml ${bam}
-
     """
 }
 
@@ -137,6 +142,7 @@ process merge_subreads{
 
     input:
     file(bam) from bam_files.collect().dump(tag: 'merge subreads')
+    file(bam_pbi) from pbi_merge_sub.collect().dump(tag: 'merge subreads pbi')
 
     output:
     set val("merged"), file("merged.subreadset.xml") into merged_subreads
@@ -160,7 +166,7 @@ process cluster_reads{
 
     output:
     file "*"
-    set val(name), file( "${name}.unpolished.bam") into cluster_out
+    set val(name), file("${name}.unpolished.bam") into cluster_out
 
     """
     isoseq3 cluster ${refined} ${name}.unpolished.bam --verbose 
@@ -171,7 +177,6 @@ Channel
     .from(bam_names)
     .concat(merged_subreads)
     .join(cluster_out)
-    .dump(tag: 'polish')
     .set {polish_in}
 
 process polish_reads{
@@ -182,7 +187,8 @@ process polish_reads{
 
     input:
     set name, file(subreads_bam), file(unpolished_bam) from polish_in.dump(tag: 'polish')
-
+    file(bam_pbi) from pbi_polish.filter(name).dump(tag: 'merge transcripts pbi')
+    
     output:
     file "*"
     set name, file("${name}.polished.hq.fastq.gz") into polish_out
