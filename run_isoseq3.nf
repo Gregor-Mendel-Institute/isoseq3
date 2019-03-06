@@ -168,7 +168,7 @@ process cluster_reads{
 }
 
 
-polish_in.concat(merge_subreads)
+polish_in.concat(merged_subreads)
 polish_in.join(cluster_out)
 
 process polish_reads{
