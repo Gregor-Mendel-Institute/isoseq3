@@ -52,7 +52,7 @@ process ccs_calling{
         publishDir "$params.output/$name/ccs", mode: 'copy'
 
         input:
-        set name, file(bam) from ccs_in.//dump(tag: 'input')
+        set name, file(bam) from ccs_in//.dump(tag: 'input')
 
         output:
         file "*"
