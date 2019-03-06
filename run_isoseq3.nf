@@ -52,7 +52,7 @@ process ccs_calling{
         publishDir "$params.output/$name/ccs", mode: 'copy'
 
         input:
-        set name, file(bam) from ccs_in//.dump(tag: 'input')
+        set name, file(bam) from ccs_in.dump(tag: 'input')
 
         output:
         file "*"
@@ -72,7 +72,7 @@ process remove_primers{
     publishDir "$params.output/$name/lima", mode: 'copy'
 
     input:
-    set name, file(bam) from ccs_out//.dump(tag: 'ccs_name')
+    set name, file(bam) from ccs_out.dump(tag: 'ccs_name')
     file primers from primers_remove.collect()
     
     output:
@@ -91,7 +91,7 @@ process run_refine{
     publishDir "$params.output/$name/refine", mode: 'copy'
 
     input:
-    set name, file(bam) from primers_removed_out//.dump(tag: 'primers_removed')
+    set name, file(bam) from primers_removed_out.dump(tag: 'primers_removed')
     file primers from primers_refine.collect()
     
     output:
