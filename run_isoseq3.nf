@@ -48,7 +48,7 @@ Channel
 Channel
     .fromPath(params.input + '*.bam.pbi')
     .ifEmpty { error "Cannot find matching bam.pbi files: $params.input." }
-    .into { pbi_merge_trans, pbi_merge_sub, pbi_polish }
+    .into { pbi_merge_trans; pbi_merge_sub; pbi_polish }
 
 process ccs_calling{
 
@@ -187,7 +187,7 @@ process polish_reads{
 
     input:
     set name, file(subreads_bam), file(unpolished_bam) from polish_in.dump(tag: 'polish')
-    file(bam_pbi) from pbi_polish.filter(name).dump(tag: 'merge transcripts pbi')
+    file(bam_pbi) from pbi_polish.dump(tag: 'polish pbi')
     
     output:
     file "*"
