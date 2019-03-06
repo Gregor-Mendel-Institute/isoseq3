@@ -30,9 +30,9 @@ Channel
 Channel
     .fromPath(params.input + '*.bam')
     .ifEmpty { error "Cannot find matching bam files: $params.input." }
-    .tap { merge_subread_in }
+    .tap { bam_files }
     .map{ file -> tuple(file.name.replaceAll(/.bam$/,''), file) }
-    .tap { polish_in }
+    .tap { bam_names }
 
 Channel
     .fromPath(params.primers)
@@ -136,7 +136,7 @@ process merge_subreads{
     publishDir "$params.output/merged", mode: 'copy'
 
     input:
-    file(bam) from merge_subread_in.collect().dump(tag: 'merge subreads')
+    file(bam) from bam_files.collect().dump(tag: 'merge subreads')
 
     output:
     set val("merged"), file("merged.subreadset.xml") into merged_subreads
@@ -167,9 +167,15 @@ process cluster_reads{
     """
 }
 
+Channel
+    .from(bam_names)
+    .concat(merge_subreads)
+    .join(cluster_out)
+    .dump(tag: 'polish')
+    .set {polish_in}
 
-polish_in.concat(merged_subreads)
-polish_in.join(cluster_out)
+//polish_in.concat(merged_subreads)
+//polish_in.join(cluster_out)
 
 process polish_reads{
     
