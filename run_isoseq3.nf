@@ -136,7 +136,7 @@ process merge_subreads{
     publishDir "$params.output/merged", mode: 'copy'
 
     input:
-    file(bam), from merge_subread_in.collect().dump(tag: 'merge subreads')
+    file(bam) from merge_subread_in.collect().dump(tag: 'merge subreads')
 
     output:
     set val("merged"), file("merged.subreadset.xml") into merged_subreads
