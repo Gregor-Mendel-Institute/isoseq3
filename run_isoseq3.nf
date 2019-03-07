@@ -173,16 +173,6 @@ process cluster_reads{
     """
 }
 
-//bam_names.concat(merged_subreads)
-//bam_names.join(cluster_out.collect())
-//bam_names.dump(tag: 'polish_1')
-//bam_names.set {polish_in}
-
-//Channel.create()
-//    .concat(bam_names, merged_subreads)
-//    .join(cluster_out)
-//    .dump(tag: 'polish_1')
-//    .set {polish_in}
 
 process polish_reads{
     
