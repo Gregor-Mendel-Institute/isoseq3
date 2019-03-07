@@ -169,15 +169,20 @@ process cluster_reads{
     set val(name), file("${name}.unpolished.bam") into cluster_out
 
     """
-    isoseq3 cluster ${refined} ${name}.unpolished.bam --verbose 
+    isoseq3 cluster ${refined} ${name}.unpolished.bam  
     """
 }
 
-Channel
-    .from(bam_names)
-    .concat(merged_subreads)
-    .join(cluster_out)
-    .set {polish_in}
+//bam_names.concat(merged_subreads)
+//bam_names.join(cluster_out.collect())
+//bam_names.dump(tag: 'polish_1')
+//bam_names.set {polish_in}
+
+//Channel.create()
+//    .concat(bam_names, merged_subreads)
+//    .join(cluster_out)
+//    .dump(tag: 'polish_1')
+//    .set {polish_in}
 
 process polish_reads{
     
@@ -186,8 +191,9 @@ process polish_reads{
     publishDir "$params.output/$name/polish", mode: 'copy'
 
     input:
-    set name, file(subreads_bam), file(unpolished_bam) from polish_in.dump(tag: 'polish')
-    file(bam_pbi) from pbi_polish.dump(tag: 'polish pbi')
+    set name, file(subreads_bam), file(unpolished_bam) from bam_names.concat(merged_subreads).join(cluster_out).dump(tag: 'polish')
+    //set name, file(subreads_bam), file(unpolished_bam) from polish_in.dump(tag: 'polish_2')
+    file(bam_pbi) from pbi_polish.collect().dump(tag: 'polish pbi')
     
     output:
     file "*"
@@ -207,7 +213,7 @@ process align_reads{
 
     input:
     set name, file(sample) from polish_out.dump(tag: 'align')
-    file fasta from ref_fasta.collect()
+    file fasta from ref_fasta
 
     output:    
     file "*.{bam,bed,log}"
