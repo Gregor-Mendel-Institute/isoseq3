@@ -22,4 +22,4 @@ The current pipeline is designed to run on the Mendel cluster of the [GMI Vienna
 To run the pipeline simply run e.g:
 
 ```bash
-nextflow run_isoseq3.nf --input "/lustre/scratch/users/falko.hofmann/isoseq/samples/*/" --output "/lustre/scratch/users/falko.hofmann/isoseq/results/*/ --primer_type default
+nextflow run_isoseq3.nf --input "/lustre/scratch/users/falko.hofmann/isoseq/samples/*/" --output "/lustre/scratch/users/falko.hofmann/isoseq/results/*/
