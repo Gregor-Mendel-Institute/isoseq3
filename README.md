@@ -3,7 +3,7 @@ This is a [nextflow](https://github.com/nextflow-io/nextflow) implementation of 
 
 ## Setup
 ### Requirements
-This pipeline requires anaconda[https://anaconda.org/]. The required dependencies will then be installed by nextflow into a conda virtual environment
+This pipeline requires [anaconda](https://anaconda.org/). The required dependencies will then be installed by nextflow into a conda virtual environment
 
 ### Configuration
 The current pipeline is designed to run on the Mendel cluster of the [GMI Vienna](https://www.gmi.oeaw.ac.at/). To make it run for your group edit the `projectName` & `fasta` parameters in the the mendel.config file to fit to your group project and needs. To make it run on another infrastructure simply add a new nextflow config file in the conf folder and source via the nextflow.config file. See [here](https://www.nextflow.io/docs/latest/config.html) for more information. 
