@@ -168,7 +168,7 @@ process cluster_reads{
     set val(name), file("${name}.unpolished.bam") into cluster_out
 
     """
-    isoseq3 cluster ${refined} ${name}.unpolished.bam  
+    isoseq3 cluster ${refined} ${name}.unpolished.bam
     """
 }
 
