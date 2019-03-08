@@ -1,18 +1,17 @@
 #!/usr/bin/env nextflow
-
 params.merge = true
 params.align = true
-params.bookend = false
 
+params.ref_fasta = params.genome ? params.genomes[ params.genome ].fasta_file ?: false : false
+params.intron_max = params.genome ? params.genomes[ params.genome ].intron_max ?: false : false
+params.primers = params.primer_type ? params.primers_stets[ params.primer_type ].primer_file ?: false : false
 
-//params.ref_fasta = params.genome ? params.genomes[ params.genome ].fasta ?: false : false
-//params.intron_max = params.genome ? params.genomes[ params.genome ].intron_max ?: false : false
-//params.transcript_max = params.genome ? params.genomes[ params.genome ].transcript_max ?: false : false
 
 log.info "IsoSeq3 NF  ~  version 3.1"
 log.info "====================================="
 log.info "input paths: ${params.input}"
 log.info "output paths: ${params.output}"
+log.info "primer set: ${params.primers_type}"
 log.info "merge smrt cells: ${params.merge}"
 log.info "align reads: ${params.align}"
 log.info "genome: ${params.genome}"
@@ -203,7 +202,7 @@ process align_reads{
 
     input:
     set name, file(sample) from polish_out.dump(tag: 'align')
-    file fasta from ref_fasta
+    file fasta from ref_fasta.collect()
 
     output:    
     file "*.{bam,bed,log}"
